@@ -1,0 +1,112 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: fairbet
+      POSTGRES_USER: fairbet_user
+      POSTGRES_PASSWORD: fairbet_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fairbet_user -d fairbet"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../Dockerfile.backend
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py seed_demo &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      DEBUG: "True"
+      SECRET_KEY: django-insecure-dev-key-change-in-production
+      ALLOWED_HOSTS: "*"
+      POSTGRES_DB: fairbet
+      POSTGRES_USER: fairbet_user
+      POSTGRES_PASSWORD: fairbet_pass
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      REDIS_HOST: redis
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../Dockerfile.frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: ../Dockerfile.backend
+    command: celery -A fairbet worker -l info
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+      - redis
+    environment:
+      DEBUG: "True"
+      SECRET_KEY: django-insecure-dev-key-change-in-production
+      ALLOWED_HOSTS: "*"
+      POSTGRES_DB: fairbet
+      POSTGRES_USER: fairbet_user
+      POSTGRES_PASSWORD: fairbet_pass
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      REDIS_HOST: redis
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: ../Dockerfile.backend
+    command: celery -A fairbet beat -l info
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+      - redis
+    environment:
+      DEBUG: "True"
+      SECRET_KEY: django-insecure-dev-key-change-in-production
+      ALLOWED_HOSTS: "*"
+      POSTGRES_DB: fairbet
+      POSTGRES_USER: fairbet_user
+      POSTGRES_PASSWORD: fairbet_pass
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      REDIS_HOST: redis
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+
+volumes:
+  postgres_data:

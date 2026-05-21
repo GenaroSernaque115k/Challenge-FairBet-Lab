@@ -1,0 +1,36 @@
+# Files
+PLAN.md
+*.pyc
+__pycache__/
+*.pyo
+.env
+*.log
+
+# Virtual env
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Django
+*.sqlite3
+staticfiles/
+media/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Docker
+*.egg-info/
+.pytest_cache/
+backend/celerybeat-schedule
