@@ -28,6 +28,8 @@ INSTALLED_APPS = [
     'infrastructure',
     'users',
     'wallet',
+    'events',
+    'betting',
 ]
 
 MIDDLEWARE = [

@@ -38,14 +38,14 @@ export default function AppBar() {
 
   return (
     <>
-      <header className="bg-black border-b border-gray-800 sticky top-0 z-40">
+      <header className="bg-[#000000] border-b border-gray-800 sticky top-0 z-40">
         <div className="mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
             <a href="/" className="flex items-center gap-2 flex-shrink-0">
               <img src="/LOGO.PNG" alt="FairBet" className="h-12 w-auto" />
             </a>
             <nav className="hidden lg:flex gap-1">
-              <a href="/" className="px-3 py-2 text-sm text-gray-300 hover:text-primary-400 transition rounded-lg">
+              <a href="/betting" className="px-3 py-2 text-sm text-gray-300 hover:text-primary-400 transition rounded-lg">
                 Apuesta Deportiva
               </a>
               <a href="/live" className="px-3 py-2 text-sm text-gray-300 hover:text-primary-400 transition rounded-lg">

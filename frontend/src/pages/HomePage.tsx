@@ -1,4 +1,7 @@
+import { useNavigate } from 'react-router-dom'
+
 export default function HomePage() {
+  const navigate = useNavigate()
   return (
     <div className="text-center py-20">
       <img src="/LOGO.PNG" alt="FairBet" className="h-16 mx-auto mb-8" />
@@ -11,7 +14,10 @@ export default function HomePage() {
       <p className="text-gray-500 mb-8">
         Estadisticas, modelos y ciencia para apostar con ventaja.
       </p>
-      <button className="bg-primary-600 hover:bg-primary-700 text-black font-semibold px-6 py-3 rounded-lg transition">
+      <button
+        onClick={() => navigate('/betting')}
+        className="bg-primary-600 hover:bg-primary-700 text-black font-semibold px-6 py-3 rounded-lg transition"
+      >
         Conoce nuestro metodo
       </button>
     </div>
