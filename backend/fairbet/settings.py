@@ -30,6 +30,8 @@ INSTALLED_APPS = [
     'wallet',
     'events',
     'betting',
+    'responsible_gaming',
+    'audit',
 ]
 
 MIDDLEWARE = [
@@ -40,6 +42,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'fairbet.middleware.AuditIPMiddleware',
 ]
 
 ROOT_URLCONF = 'fairbet.urls'
@@ -134,6 +137,17 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'America/Lima'
+
+CELERY_BEAT_SCHEDULE = {
+    'check-fraud-patterns': {
+        'task': 'audit.tasks.check_fraud_patterns',
+        'schedule': 900.0,
+    },
+    'reactivate-autoexcluded': {
+        'task': 'audit.tasks.reactivate_autoexcluded_users',
+        'schedule': 3600.0,
+    },
+}
 
 LOGGING = {
     'version': 1,

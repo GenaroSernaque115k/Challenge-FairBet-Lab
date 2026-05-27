@@ -5,3 +5,6 @@ class BettingConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'betting'
     verbose_name = 'Apuestas'
+
+    def ready(self):
+        import fairbet.signals  # noqa

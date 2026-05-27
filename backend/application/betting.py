@@ -14,6 +14,7 @@ from domain.betting import (
     validate_event_not_started,
 )
 from domain.events import calculate_payout, calculate_cashout
+from application.responsible_gaming import validate_user_limits
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +71,10 @@ def realizar_apuesta(user, selections_data: list[dict], stake: Decimal,
     error = validar_usuario_apto(user)
     if error:
         raise ValueError(error)
+
+    limit_error = validate_user_limits(user, stake)
+    if limit_error:
+        raise ValueError(limit_error)
 
     is_combined = len(selections_data) > 1
     stake_error = validate_bet_stake(stake, is_combined)

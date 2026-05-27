@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useBalanceStore } from '../../store/balanceStore'
 import { wallet as walletService } from '../../services/auth'
@@ -14,6 +15,7 @@ interface UserPanelProps {
 }
 
 export default function UserPanel({ onClose, onDeposit }: UserPanelProps) {
+  const navigate = useNavigate()
   const { user, logout } = useAuth()
   const { balance, setBalance } = useBalanceStore()
   const [withdrawOpen, setWithdrawOpen] = useState(false)
@@ -87,15 +89,24 @@ export default function UserPanel({ onClose, onDeposit }: UserPanelProps) {
             <ArrowUpFromLine className="w-4 h-4 text-orange-500" />
             Retirar
           </button>
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#1a1a1a] transition text-sm text-gray-300">
+          <button
+            onClick={() => { onClose(); navigate('/profile') }}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#1a1a1a] transition text-sm text-gray-300"
+          >
             <User className="w-4 h-4 text-gray-500" />
             Mi Perfil
           </button>
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#1a1a1a] transition text-sm text-gray-300">
+          <button
+            onClick={() => { onClose(); navigate('/my-bets') }}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#1a1a1a] transition text-sm text-gray-300"
+          >
             <Clock className="w-4 h-4 text-gray-500" />
             Historial
           </button>
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#1a1a1a] transition text-sm text-gray-300">
+          <button
+            onClick={() => { onClose(); navigate('/profile') }}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#1a1a1a] transition text-sm text-gray-300"
+          >
             <Settings className="w-4 h-4 text-gray-500" />
             Control
           </button>
