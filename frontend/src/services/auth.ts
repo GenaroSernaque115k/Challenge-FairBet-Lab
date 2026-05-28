@@ -29,6 +29,11 @@ export const wallet = {
     return response.data
   },
 
+  getBonusBalance: async (): Promise<WalletBalance> => {
+    const response = await api.get('/wallet/saldo/?tipo=bonus')
+    return response.data
+  },
+
   recargar: async (data: TransactionRequest): Promise<WalletBalance> => {
     const response = await api.post('/wallet/recargar/', data)
     return response.data

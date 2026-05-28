@@ -5,7 +5,7 @@ import { useBalanceStore } from '../../store/balanceStore'
 import { wallet as walletService } from '../../services/auth'
 import {
   X, Wallet, Bell, ArrowDownToLine, ArrowUpFromLine,
-  User, Clock, Settings, LogOut
+  User, Clock, Gift, Settings, LogOut
 } from 'lucide-react'
 import WithdrawModal from '../wallet/WithdrawModal'
 
@@ -17,7 +17,7 @@ interface UserPanelProps {
 export default function UserPanel({ onClose, onDeposit }: UserPanelProps) {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
-  const { balance, setBalance } = useBalanceStore()
+  const { balance, setBalance, bonusBalance, setBonusBalance } = useBalanceStore()
   const [withdrawOpen, setWithdrawOpen] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
 
@@ -29,8 +29,9 @@ export default function UserPanel({ onClose, onDeposit }: UserPanelProps) {
   useEffect(() => {
     if (user) {
       walletService.getBalance().then((data) => setBalance(parseFloat(data.balance)))
+      walletService.getBonusBalance().then((data) => setBonusBalance(parseFloat(data.balance)))
     }
-  }, [user, setBalance])
+  }, [user, setBalance, setBonusBalance])
 
   const handleLogout = () => {
     logout()
@@ -62,12 +63,25 @@ export default function UserPanel({ onClose, onDeposit }: UserPanelProps) {
           </button>
         </div>
 
-        <div className="p-5 border-b border-gray-800">
-          <div className="flex items-center gap-2 mb-3">
-            <Wallet className="w-4 h-4 text-primary-500" />
-            <span className="text-xs text-gray-500 uppercase tracking-wide">Saldo Disponible</span>
+        <div className="p-5 border-b border-gray-800 space-y-3">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Wallet className="w-4 h-4 text-white" />
+              <span className="text-xs text-gray-500 uppercase tracking-wide">Saldo Real</span>
+            </div>
+            <p className="text-xl font-bold text-white">{balance.toFixed(4)} BP</p>
           </div>
-          <p className="text-2xl font-bold text-primary-400">{balance.toFixed(4)} BP</p>
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Gift className="w-4 h-4 text-primary-500" />
+              <span className="text-xs text-gray-500 uppercase tracking-wide">Saldo Bono</span>
+            </div>
+            <p className="text-lg font-semibold text-primary-400">{bonusBalance.toFixed(4)} BP</p>
+          </div>
+          <div className="border-t border-gray-800 pt-2 flex justify-between items-center">
+            <span className="text-xs text-gray-500 uppercase">Total</span>
+            <span className="text-sm font-bold text-green-400">{(balance + bonusBalance).toFixed(4)} BP</span>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-3">
@@ -88,6 +102,13 @@ export default function UserPanel({ onClose, onDeposit }: UserPanelProps) {
           >
             <ArrowUpFromLine className="w-4 h-4 text-orange-500" />
             Retirar
+          </button>
+          <button
+            onClick={() => { onClose(); navigate('/bonuses') }}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#1a1a1a] transition text-sm text-gray-300"
+          >
+            <Gift className="w-4 h-4 text-primary-500" />
+            Bonos
           </button>
           <button
             onClick={() => { onClose(); navigate('/profile') }}

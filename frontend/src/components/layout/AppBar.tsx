@@ -11,7 +11,7 @@ import DepositModal from '../wallet/DepositModal'
 
 export default function AppBar() {
   const { user } = useAuth()
-  const { balance, setBalance } = useBalanceStore()
+  const { balance, setBalance, bonusBalance, setBonusBalance } = useBalanceStore()
 
   const [loginOpen, setLoginOpen] = useState(false)
   const [registerOpen, setRegisterOpen] = useState(false)
@@ -21,10 +21,12 @@ export default function AppBar() {
   useEffect(() => {
     if (user) {
       walletService.getBalance().then((data) => setBalance(parseFloat(data.balance)))
+      walletService.getBonusBalance().then((data) => setBonusBalance(parseFloat(data.balance)))
     } else {
       setBalance(0)
+      setBonusBalance(0)
     }
-  }, [user, setBalance])
+  }, [user, setBalance, setBonusBalance])
 
   const openRegister = () => {
     setLoginOpen(false)
@@ -66,7 +68,7 @@ export default function AppBar() {
                 <div className="flex items-center gap-2 bg-[#1a1a1a] px-4 py-2 rounded-lg border border-gray-800">
                   <Wallet className="w-4 h-4 text-primary-500" />
                   <span className="font-semibold text-primary-400 text-sm">
-                    {balance.toFixed(4)} BP
+                    {(balance + bonusBalance).toFixed(4)} BP
                   </span>
                 </div>
                 <button

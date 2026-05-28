@@ -38,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = async (data: { username: string; email: string; password: string; dni: string; fecha_nacimiento: string }) => {
     useBalanceStore.getState().setBalance(0)
+    useBalanceStore.getState().setBonusBalance(0)
     const result = await auth.register(data)
     localStorage.setItem('access_token', result.access)
     localStorage.setItem('refresh_token', result.refresh)
@@ -47,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     auth.logout()
     useBalanceStore.getState().setBalance(0)
+    useBalanceStore.getState().setBonusBalance(0)
     setUser(null)
   }
 

@@ -9,7 +9,7 @@ User = get_user_model()
 
 
 class Command(BaseCommand):
-    help = 'Seed usuarios demo, cuenta casa y wallets inicializadas'
+    help = 'Seed usuarios demo, cuenta casa, wallets inicializadas y bonos'
 
     def handle(self, *args, **kwargs):
         casa_user, _ = User.objects.get_or_create(
@@ -57,11 +57,38 @@ class Command(BaseCommand):
                     },
                 )
                 Account.objects.get_or_create(user=user, type='main')
+                Account.objects.get_or_create(user=user, type='bonus')
                 recargar(user, data['balance'], f'Saldo inicial para {data["username"]}')
                 self.stdout.write(self.style.SUCCESS(
                     f'Creado {data["username"]} (verificado) con balance {data["balance"]}'
                 ))
             else:
+                Account.objects.get_or_create(user=user, type='bonus')
                 self.stdout.write(self.style.WARNING(f'{data["username"]} ya existe'))
+
+        from infrastructure.bonuses import Bonus
+        bono_bienvenida, _ = Bonus.objects.get_or_create(
+            tipo='bienvenida',
+            nombre='Bono de Bienvenida 100%',
+            defaults={
+                'descripcion': '100% de tu primer deposito hasta 100 BP. Rollover x5.',
+                'porcentaje': 100,
+                'monto_max': Decimal('100.0000'),
+                'rollover_requerido': 5,
+            },
+        )
+        bono_recarga, _ = Bonus.objects.get_or_create(
+            tipo='recarga',
+            nombre='Bono de Recarga 50%',
+            defaults={
+                'descripcion': '50% extra en cada recarga hasta 50 BP. Rollover x3.',
+                'porcentaje': 50,
+                'monto_max': Decimal('50.0000'),
+                'rollover_requerido': 3,
+            },
+        )
+        self.stdout.write(self.style.SUCCESS(
+            f'Bonos creados: {bono_bienvenida.nombre}, {bono_recarga.nombre}'
+        ))
 
         self.stdout.write(self.style.SUCCESS('Seed completo'))

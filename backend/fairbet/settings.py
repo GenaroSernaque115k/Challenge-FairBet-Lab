@@ -32,6 +32,8 @@ INSTALLED_APPS = [
     'betting',
     'responsible_gaming',
     'audit',
+    'bonuses',
+    'operador',
 ]
 
 MIDDLEWARE = [

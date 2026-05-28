@@ -15,6 +15,7 @@ from domain.betting import (
 )
 from domain.events import calculate_payout, calculate_cashout
 from application.responsible_gaming import validate_user_limits
+from application.bonuses import process_rollover_contribution
 
 logger = logging.getLogger(__name__)
 
@@ -131,6 +132,8 @@ def realizar_apuesta(user, selections_data: list[dict], stake: Decimal,
 
         from application.wallet import create_double_entry
         create_double_entry(wallet, apuestas, stake, f'Apuesta #{bet.id}')
+
+    process_rollover_contribution(user, stake, Decimal(min(float(s.odds_at_time) for s in bet.selections.all())))
 
     return bet
 

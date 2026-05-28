@@ -122,10 +122,19 @@ class SaldoView(generics.GenericAPIView):
 
     @extend_schema(
         summary='Consultar saldo',
-        description='Retorna el saldo actual de la cuenta principal calculado como SUM(CREDIT) - SUM(DEBIT)',
+        description='Retorna el saldo actual de la cuenta principal calculado como SUM(CREDIT) - SUM(DEBIT). '
+                    'Usa ?tipo=bonus para consultar el saldo de bonos.',
         responses={200: OpenApiTypes.OBJECT},
         examples=[SALDO_RESPONSE],
+        parameters=[{
+            'name': 'tipo',
+            'in_': 'query',
+            'schema': {'type': 'string', 'enum': ['main', 'bonus'], 'default': 'main'},
+            'description': 'Tipo de cuenta: main (principal) o bonus (bonos)',
+            'required': False,
+        }],
     )
     def get(self, request):
-        balance = get_balance(request.user)
+        tipo = request.GET.get('tipo', 'main')
+        balance = get_balance(request.user, account_type=tipo)
         return Response({'balance': str(balance)})
