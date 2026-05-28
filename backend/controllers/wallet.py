@@ -1,5 +1,6 @@
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiTypes
 
@@ -28,6 +29,8 @@ SALDO_RESPONSE = OpenApiExample(
 class RecargarView(generics.GenericAPIView):
     serializer_class = RecargarSerializer
     permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'wallet'
 
     @extend_schema(
         summary='Recargar cuenta',
@@ -74,6 +77,8 @@ class RecargarView(generics.GenericAPIView):
 class RetirarView(generics.GenericAPIView):
     serializer_class = RetirarSerializer
     permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'wallet'
 
     @extend_schema(
         summary='Retirar fondos',

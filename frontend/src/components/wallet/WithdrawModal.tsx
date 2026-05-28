@@ -12,6 +12,9 @@ export default function WithdrawModal({ onClose }: WithdrawModalProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [step, setStep] = useState<'amount' | 'verify'>('amount')
+  const [verificationCode, setVerificationCode] = useState('')
+  const [generatedCode, setGeneratedCode] = useState('')
   const { balance, setBalance } = useBalanceStore()
   const overlayRef = useRef<HTMLDivElement>(null)
 
@@ -22,19 +25,34 @@ export default function WithdrawModal({ onClose }: WithdrawModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
-    setSuccess('')
-    setLoading(true)
-    const idempotencyKey = crypto.randomUUID()
-    try {
-      const data = await walletService.retirar({ amount, idempotency_key: idempotencyKey })
-      setBalance(parseFloat(data.balance))
-      setSuccess(`Retiro exitoso. Nuevo saldo: ${parseFloat(data.balance).toFixed(4)} BP`)
-      setAmount('')
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Error al retirar')
-    } finally {
-      setLoading(false)
+    if (step === 'amount' && parseFloat(amount) > 0) {
+      const code = String(Math.floor(100000 + Math.random() * 900000))
+      setGeneratedCode(code)
+      setVerificationCode('')
+      setStep('verify')
+      return
+    }
+
+    if (step === 'verify') {
+      if (verificationCode !== generatedCode) {
+        setError('Codigo de verificacion incorrecto')
+        return
+      }
+      setError('')
+      setLoading(true)
+      const idempotencyKey = crypto.randomUUID()
+      try {
+        const data = await walletService.retirar({ amount, idempotency_key: idempotencyKey })
+        setBalance(parseFloat(data.balance))
+        setSuccess(`Retiro exitoso. Nuevo saldo: ${parseFloat(data.balance).toFixed(4)} BP`)
+        setAmount('')
+        setStep('amount')
+      } catch (err: any) {
+        setError(err.response?.data?.error || 'Error al retirar')
+        setStep('amount')
+      } finally {
+        setLoading(false)
+      }
     }
   }
 
@@ -70,31 +88,55 @@ export default function WithdrawModal({ onClose }: WithdrawModalProps) {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm text-gray-400 mb-1.5">
-              Monto (BP)
-            </label>
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              min="0.0001"
-              step="0.0001"
-              max={balance}
-              className="w-full bg-[#0a0a0a] border border-gray-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-primary-500 transition"
-              placeholder="0.0000"
-              required
-            />
-            <p className="text-xs text-gray-500 mt-1.5">
-              Saldo disponible: <span className="text-primary-400">{balance.toFixed(4)} BP</span>
-            </p>
-          </div>
+          {step === 'amount' ? (
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">
+                Monto (BP)
+              </label>
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                min="0.0001"
+                step="0.0001"
+                max={balance}
+                className="w-full bg-[#0a0a0a] border border-gray-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-primary-500 transition"
+                placeholder="0.0000"
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1.5">
+                Saldo disponible: <span className="text-primary-400">{balance.toFixed(4)} BP</span>
+              </p>
+            </div>
+          ) : (
+            <div>
+              <div className="bg-[#0a0a0a] border border-gray-700 rounded-lg p-4 mb-4 text-center">
+                <p className="text-xs text-gray-400 mb-2">Tu codigo de verificacion es:</p>
+                <p className="text-2xl font-bold text-primary-400 tracking-widest">{generatedCode}</p>
+              </div>
+              <label className="block text-sm text-gray-400 mb-1.5">
+                Ingresa el codigo
+              </label>
+              <input
+                type="text"
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value)}
+                maxLength={6}
+                className="w-full bg-[#0a0a0a] border border-gray-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-primary-500 transition tracking-widest text-center"
+                placeholder="000000"
+                required
+              />
+              <p className="text-[10px] text-gray-600 mt-1.5 text-center">
+                Verificacion 2FA simulada - Ingresa el codigo mostrado
+              </p>
+            </div>
+          )}
           <button
             type="submit"
             disabled={loading || !amount || parseFloat(amount) > balance}
             className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-black font-semibold py-2.5 rounded-lg transition"
           >
-            {loading ? 'Procesando...' : 'Retirar'}
+            {loading ? 'Procesando...' : step === 'amount' ? 'Continuar' : 'Confirmar Retiro'}
           </button>
         </form>
       </div>

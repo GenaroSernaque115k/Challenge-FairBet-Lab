@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Search, ChevronRight, Star } from 'lucide-react'
+import { Search, ChevronRight, Star, X } from 'lucide-react'
 import { events as eventsService, type Sport } from '../../services/events'
 
 interface LeftSidebarProps {
@@ -19,6 +19,7 @@ export default function LeftSidebar({
 }: LeftSidebarProps) {
   const [sports, setSports] = useState<Sport[]>([])
   const [todayEvents, setTodayEvents] = useState<{ id: number; home: string; away: string }[]>([])
+  const [collapsed, setCollapsed] = useState(false)
 
   useEffect(() => {
     eventsService.sports().then(setSports)
@@ -30,7 +31,15 @@ export default function LeftSidebar({
   }, [])
 
   return (
-    <aside className="w-64 flex-shrink-0 space-y-4">
+    <aside className={`flex-shrink-0 space-y-4 ${collapsed ? 'w-0 overflow-hidden opacity-0' : 'w-64'} transition-all duration-200`}>
+      <div className="flex items-center justify-between mb-2">
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="md:hidden text-gray-500 hover:text-white p-1"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
       <div>
         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-1">
           Deportes

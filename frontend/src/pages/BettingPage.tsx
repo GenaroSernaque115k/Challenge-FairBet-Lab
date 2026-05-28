@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useLocation } from 'react-router-dom'
+import { Menu } from 'lucide-react'
 import type { EventItem } from '../services/events'
 import LeftSidebar from '../components/betting/LeftSidebar'
 import CenterContent from '../components/betting/CenterContent'
@@ -24,6 +25,7 @@ export default function BettingPage() {
   const [selections, setSelections] = useState<Selection[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [rightTab, setRightTab] = useState<'cupon' | 'apuestas'>('cupon')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const selectedIds = useMemo(() => new Set(selections.map((s) => s.selectionId)), [selections])
 
   useEffect(() => {
@@ -90,13 +92,21 @@ export default function BettingPage() {
 
   return (
     <div className="flex gap-4 px-4">
-      <LeftSidebar
-        onSelectSport={(slug) => setSelectedSport(slug)}
-        onSelectEvent={(id) => setSelectedEventId(id)}
-        selectedSport={selectedSport}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-      />
+      <div className={`lg:block ${sidebarOpen ? 'block fixed left-0 top-16 z-30 bg-black h-full shadow-2xl' : 'hidden'}`}>
+        <LeftSidebar
+          onSelectSport={(slug) => { setSelectedSport(slug); setSidebarOpen(false) }}
+          onSelectEvent={(id) => { setSelectedEventId(id); setSidebarOpen(false) }}
+          selectedSport={selectedSport}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+        />
+      </div>
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className="lg:hidden fixed left-4 top-20 z-20 bg-[#1a1a1a] border border-gray-700 rounded-full p-2 shadow-lg"
+      >
+        <Menu className="w-4 h-4" />
+      </button>
 
       <div className="flex-1 min-w-0">
         {renderCenter()}

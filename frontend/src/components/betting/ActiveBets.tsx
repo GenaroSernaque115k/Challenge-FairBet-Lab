@@ -1,17 +1,40 @@
 import { useEffect, useState } from 'react'
+import { Loader2 } from 'lucide-react'
 import { betting, type Bet } from '../../services/betting'
+import { useBalanceStore } from '../../store/balanceStore'
+import { wallet as walletService } from '../../services/auth'
 
 export default function ActiveBets() {
   const [bets, setBets] = useState<Bet[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('')
+  const [cashingOut, setCashingOut] = useState<number | null>(null)
+  const [mensaje, setMensaje] = useState('')
+  const { setBalance } = useBalanceStore()
 
-  useEffect(() => {
+  const load = () => {
     setLoading(true)
     betting.misApuestas(filter ? { status: filter } : undefined)
       .then(setBets)
       .finally(() => setLoading(false))
-  }, [filter])
+  }
+
+  useEffect(() => { load() }, [filter])
+
+  const handleCashOut = async (betId: number) => {
+    setMensaje('')
+    setCashingOut(betId)
+    try {
+      await betting.cashOut(betId, {})
+      walletService.getBalance().then((d) => setBalance(parseFloat(d.balance)))
+      setMensaje(`Cash-out de apuesta #${betId} realizado`)
+      load()
+    } catch (err: any) {
+      setMensaje(err.response?.data?.error || 'Error al hacer cash-out')
+    } finally {
+      setCashingOut(null)
+    }
+  }
 
   const statusColors: Record<string, string> = {
     accepted: 'text-yellow-400 bg-yellow-400/10',
@@ -47,8 +70,14 @@ export default function ActiveBets() {
         ))}
       </div>
 
+      {mensaje && (
+        <div className="bg-green-900/20 border border-green-800 text-green-400 px-3 py-2 rounded-lg text-[10px] mb-2">
+          {mensaje}
+        </div>
+      )}
+
       {loading ? (
-        <p className="text-xs text-gray-500 text-center py-8">Cargando...</p>
+        <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 text-gray-500 animate-spin" /></div>
       ) : bets.length === 0 ? (
         <p className="text-xs text-gray-500 text-center py-8">No tienes apuestas</p>
       ) : (
@@ -75,6 +104,15 @@ export default function ActiveBets() {
                     Payout: {parseFloat(bet.payout).toFixed(2)} BP
                   </span>
                 </div>
+              )}
+              {bet.status === 'accepted' && (
+                <button
+                  onClick={() => handleCashOut(bet.id)}
+                  disabled={cashingOut === bet.id}
+                  className="w-full mt-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold py-1.5 rounded text-[10px] transition"
+                >
+                  {cashingOut === bet.id ? 'Procesando...' : 'Cash-out'}
+                </button>
               )}
             </div>
           ))}

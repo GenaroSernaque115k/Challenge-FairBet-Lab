@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useBalanceStore } from '../../store/balanceStore'
 import { wallet as walletService } from '../../services/auth'
-import { Wallet, User, ChevronDown } from 'lucide-react'
+import { Wallet, User, ChevronDown, Menu, X } from 'lucide-react'
 import { useEffect } from 'react'
 import LoginModal from '../auth/LoginModal'
 import RegisterModal from '../auth/RegisterModal'
@@ -17,6 +17,7 @@ export default function AppBar() {
   const [registerOpen, setRegisterOpen] = useState(false)
   const [userPanelOpen, setUserPanelOpen] = useState(false)
   const [depositOpen, setDepositOpen] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -60,6 +61,12 @@ export default function AppBar() {
                 Ayuda
               </a>
             </nav>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden text-gray-400 hover:text-white transition"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
 
           <div className="flex items-center gap-3">
@@ -107,6 +114,23 @@ export default function AppBar() {
           </div>
         </div>
       </header>
+
+      {mobileMenuOpen && (
+        <div className="lg:hidden bg-black border-b border-gray-800 px-4 py-3 space-y-1">
+          <a href="/betting" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 text-sm text-gray-300 hover:text-primary-400 rounded-lg">
+            Apuesta Deportiva
+          </a>
+          <a href="/live" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 text-sm text-gray-300 hover:text-primary-400 rounded-lg">
+            Apuestas en Vivo
+          </a>
+          <a href="/about" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 text-sm text-gray-300 hover:text-primary-400 rounded-lg">
+            Acerca de Nosotros
+          </a>
+          <a href="/help" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 text-sm text-gray-300 hover:text-primary-400 rounded-lg">
+            Ayuda
+          </a>
+        </div>
+      )}
 
       {loginOpen && (
         <LoginModal

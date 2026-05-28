@@ -1,5 +1,6 @@
 from rest_framework import generics, status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiTypes
@@ -33,6 +34,8 @@ CASHOUT_EXAMPLE = OpenApiExample(
 class ApostarView(generics.GenericAPIView):
     serializer_class = ApostarSerializer
     permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'apuesta'
 
     @extend_schema(
         summary='Realizar apuesta',
@@ -163,7 +166,7 @@ class MisApuestasView(generics.ListAPIView):
 
 
 class LiquidarApuestaView(generics.GenericAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminUser]
 
     @extend_schema(
         summary='Liquidar apuesta (admin)',

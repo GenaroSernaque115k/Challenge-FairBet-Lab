@@ -62,8 +62,6 @@ def validar_usuario_apto(user) -> str | None:
         return 'Perfil no encontrado'
     if profile.estado_cuenta in ('bloqueado', 'autoexcluido'):
         return f'Cuenta {profile.estado_cuenta}. No se permiten apuestas.'
-    if profile.estado_cuenta == 'pendiente_verificacion':
-        return 'Cuenta pendiente de verificacion. No se permiten apuestas.'
     return None
 
 
