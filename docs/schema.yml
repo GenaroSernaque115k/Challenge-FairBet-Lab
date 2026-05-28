@@ -1,0 +1,1658 @@
+openapi: 3.0.3
+info:
+  title: FairBet API
+  version: 1.0.0
+  description: Plataforma educativa de apuestas con moneda virtual. Usa POST /api/auth/login/
+    para obtener tokens. Copia el valor del campo "access" (NO "refresh") en Authorize.
+paths:
+  /api/admin/audit/logs/:
+    get:
+      operationId: admin_audit_logs_list
+      description: Devuelve todos los logs de auditoria con hash encadenado.
+      summary: Listar logs de auditoria (admin)
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - admin
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAuditLogList'
+          description: ''
+  /api/admin/audit/verify/:
+    get:
+      operationId: admin_audit_verify_retrieve
+      description: Recalcula todos los hashes SHA256 y verifica que no haya sido alterada.
+      summary: Verificar integridad de la cadena de auditoria
+      tags:
+      - admin
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/admin/fraud/alerts/:
+    get:
+      operationId: admin_fraud_alerts_list
+      description: Devuelve todas las alertas de actividad sospechosa.
+      summary: Listar alertas de anti-fraude (admin)
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - admin
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSuspiciousActivityList'
+          description: ''
+  /api/auth/login/:
+    post:
+      operationId: auth_login_create
+      description: Autentica usuario y retorna tokens JWT. Usa el token "access" en
+        Authorize (no el refresh).
+      summary: Iniciar sesion
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Login'
+            examples:
+              LoginExitoso:
+                value:
+                  username: demo1
+                  password: demo1234
+                summary: Login exitoso
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Login'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Login'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/auth/me/:
+    get:
+      operationId: auth_me_retrieve
+      description: Retorna informacion del usuario autenticado
+      summary: Obtener perfil actual
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/auth/register/:
+    post:
+      operationId: auth_register_create
+      description: Crea un usuario con validacion de DNI peruano y perfil
+      summary: Registrar nuevo usuario
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Register'
+            examples:
+              RegistroExitoso:
+                value:
+                  username: usuario123
+                  email: usuario@email.com
+                  password: password123
+                  dni: '12345678'
+                  fecha_nacimiento: '1990-01-15'
+                summary: Registro exitoso
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Register'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Register'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/betting/apuesta/:
+    post:
+      operationId: betting_apuesta_create
+      description: Crea apuesta simple o combinada. Bloquea fondos via partida doble.
+        Si expected_odds difiere de odds actual, retorna 409 para re-cotizacion.
+      summary: Realizar apuesta
+      tags:
+      - betting
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Apostar'
+            examples:
+              ApuestaSimple1X2:
+                value:
+                  selections:
+                  - selection_id: 1
+                  stake: '100.0000'
+                  expected_odds:
+                    '1': '2.5000'
+                  idempotency_key: abc-123
+                summary: Apuesta simple 1X2
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Apostar'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Apostar'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bet'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/betting/cash-out/{bet_id}/:
+    post:
+      operationId: betting_cash_out_create
+      description: Cierra apuesta accepted antes del resultado final. cashout = stake
+        * odds_original / odds_actual * factor_casa
+      summary: Cash-out anticipado
+      parameters:
+      - in: path
+        name: bet_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - betting
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CashOut'
+            examples:
+              Cash-outAnticipado:
+                value:
+                  idempotency_key: abc-456
+                summary: Cash-out anticipado
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CashOut'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CashOut'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bet'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/betting/liquidar/{bet_id}/:
+    post:
+      operationId: betting_liquidar_create
+      description: Resuelve el resultado de una apuesta. Calcula payout automaticamente
+        y mueve fondos via partida doble.
+      summary: Liquidar apuesta (admin)
+      parameters:
+      - in: path
+        name: bet_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - betting
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bet'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/betting/mis-apuestas/:
+    get:
+      operationId: betting_mis_apuestas_list
+      description: Historial de apuestas del usuario autenticado. Filtro por status.
+      summary: Mis apuestas
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - betting
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBetList'
+          description: ''
+  /api/bonuses/apply/:
+    post:
+      operationId: bonuses_apply_create
+      description: Aplica un bono y acredita el saldo en la cuenta de bonos.
+      summary: Reclamar bono
+      tags:
+      - bonuses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplyBonus'
+            examples:
+              Bienvenida:
+                value:
+                  bonus_id: 1
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ApplyBonus'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ApplyBonus'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          description: No response body
+  /api/bonuses/available/:
+    get:
+      operationId: bonuses_available_list
+      description: Devuelve todos los bonos que el usuario puede reclamar.
+      summary: Listar bonos disponibles
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - bonuses
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBonusList'
+          description: ''
+  /api/bonuses/my-bonus/:
+    get:
+      operationId: bonuses_my_bonus_list
+      description: Devuelve el estado de los bonos del usuario y el progreso de rollover.
+      summary: Mis bonos
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - bonuses
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUserBonusList'
+          description: ''
+  /api/events/:
+    get:
+      operationId: events_list
+      description: Eventos con filtro por deporte y estado
+      summary: Listar eventos
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - events
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEventListList'
+          description: ''
+  /api/events/{id}/:
+    get:
+      operationId: events_retrieve
+      description: Evento con sus mercados y selecciones (odds)
+      summary: Detalle de evento
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - events
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventDetail'
+          description: ''
+  /api/events/live/:
+    get:
+      operationId: events_live_list
+      description: Lista de eventos con estado en_vivo
+      summary: Eventos en vivo
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - events
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEventListList'
+          description: ''
+  /api/events/markets/{id}/:
+    get:
+      operationId: events_markets_retrieve
+      description: Mercado con sus selecciones y odds
+      summary: Detalle de mercado
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - events
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Market'
+          description: ''
+  /api/events/sports/:
+    get:
+      operationId: events_sports_list
+      summary: Listar deportes
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - events
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSportList'
+          description: ''
+  /api/operator/exposure/{event_id}/:
+    get:
+      operationId: operator_exposure_retrieve
+      description: Cuanto pierde la casa si gana cada seleccion del evento.
+      summary: Exposure por evento
+      parameters:
+      - in: path
+        name: event_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - operator
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/operator/metrics/:
+    get:
+      operationId: operator_metrics_retrieve
+      description: GGR, total apostado, total pagado, usuarios activos.
+      summary: Metricas del operador
+      tags:
+      - operator
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Metrics'
+          description: ''
+  /api/operator/reporte/:
+    get:
+      operationId: operator_reporte_retrieve
+      description: Reporte MINCETUR en formato CSV con filtro por mes y anio.
+      summary: Descargar reporte CSV
+      parameters:
+      - in: query
+        name: anio
+        schema:
+          type: integer
+      - in: query
+        name: mes
+        schema:
+          type: integer
+      tags:
+      - operator
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/responsible-gaming/auto-exclude/:
+    post:
+      operationId: responsible_gaming_auto_exclude_create
+      description: 'El usuario se autoexcluye por un periodo: 7d, 30d, 90d o indefinida.
+        Esto bloquea todas las apuestas inmediatamente.'
+      summary: Autoexcluirse
+      tags:
+      - responsible-gaming
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutoExclusion'
+            examples:
+              30Dias:
+                value:
+                  periodo: 30d
+                  motivo: Necesito un descanso
+                summary: 30 dias
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AutoExclusion'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AutoExclusion'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          description: No response body
+  /api/responsible-gaming/limits/:
+    get:
+      operationId: responsible_gaming_limits_retrieve
+      description: 'Devuelve los limites configurados: diario, semanal, mensual, apuesta_max,
+        perdida_diaria.'
+      summary: Consultar limites del usuario
+      tags:
+      - responsible-gaming
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DepositLimits'
+          description: ''
+    post:
+      operationId: responsible_gaming_limits_create
+      description: Bajar limites es inmediato. Subir requiere 24h de cooldown.
+      summary: Establecer limites de deposito/apuesta
+      tags:
+      - responsible-gaming
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepositLimits'
+            examples:
+              Ejemplo:
+                value:
+                  limite_diario: '100.0000'
+                  limite_semanal: '500.0000'
+                  limite_mensual: '2000.0000'
+                  limite_apuesta_max: '50.0000'
+                  limite_perdida_diaria: '200.0000'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DepositLimits'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DepositLimits'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DepositLimits'
+              examples:
+                Ejemplo:
+                  value:
+                    limite_diario: '100.0000'
+                    limite_semanal: '500.0000'
+                    limite_mensual: '2000.0000'
+                    limite_apuesta_max: '50.0000'
+                    limite_perdida_diaria: '200.0000'
+          description: ''
+  /api/wallet/recargar/:
+    post:
+      operationId: wallet_recargar_create
+      description: Agrega saldo a la cuenta principal del usuario via partida doble
+        (casa → usuario)
+      summary: Recargar cuenta
+      tags:
+      - wallet
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Recargar'
+            examples:
+              RecargaDe100BP:
+                value:
+                  amount: '100.0000'
+                  reference: Pago con tarjeta
+                summary: Recarga de 100 BP
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Recargar'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Recargar'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/wallet/retirar/:
+    post:
+      operationId: wallet_retirar_create
+      description: Retira saldo de la cuenta principal del usuario via partida doble
+        (usuario → casa)
+      summary: Retirar fondos
+      tags:
+      - wallet
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Retirar'
+            examples:
+              RetiroDe50BP:
+                value:
+                  amount: '50.0000'
+                summary: Retiro de 50 BP
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Retirar'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Retirar'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/wallet/saldo/:
+    get:
+      operationId: wallet_saldo_retrieve
+      description: Retorna el saldo actual de la cuenta principal calculado como SUM(CREDIT)
+        - SUM(DEBIT). Usa ?tipo=bonus para consultar el saldo de bonos.
+      summary: Consultar saldo
+      tags:
+      - wallet
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+              examples:
+                SaldoActual:
+                  value:
+                    balance: '1000.0000'
+                  summary: Saldo actual
+          description: ''
+components:
+  schemas:
+    Apostar:
+      type: object
+      properties:
+        selections:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          minItems: 1
+        stake:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+        expected_odds:
+          type: object
+          additionalProperties:
+            type: string
+            format: decimal
+            pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+          description: '{selection_id: odds_esperada} para re-cotizacion'
+        sistema_tipo:
+          allOf:
+          - $ref: '#/components/schemas/SistemaTipoEnum'
+          description: |-
+            trixie/yankee/patent/lucky15 para apuesta de sistema
+
+            * `trixie` - trixie
+            * `yankee` - yankee
+            * `patent` - patent
+            * `lucky15` - lucky15
+        idempotency_key:
+          type: string
+          maxLength: 128
+      required:
+      - selections
+      - stake
+    ApplyBonus:
+      type: object
+      properties:
+        bonus_id:
+          type: integer
+        deposit_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+          default: '0.0000'
+          description: Monto del deposito que activa el bono
+      required:
+      - bonus_id
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        timestamp:
+          type: string
+          format: date-time
+        username:
+          type: string
+          readOnly: true
+          default: ''
+        action:
+          type: string
+          maxLength: 100
+        entity_type:
+          type: string
+          maxLength: 50
+        entity_id:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        data: {}
+        hash_prev:
+          type: string
+          maxLength: 64
+        hash_current:
+          type: string
+          maxLength: 64
+      required:
+      - action
+      - entity_type
+      - id
+      - username
+    AutoExclusion:
+      type: object
+      properties:
+        periodo:
+          allOf:
+          - $ref: '#/components/schemas/PeriodoEnum'
+          description: |-
+            7d, 30d, 90d, indefinida
+
+            * `7d` - 7d
+            * `30d` - 30d
+            * `90d` - 90d
+            * `indefinida` - indefinida
+        motivo:
+          type: string
+          default: ''
+      required:
+      - periodo
+    Bet:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+        stake:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+        total_odds:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+        status:
+          $ref: '#/components/schemas/BetStatusEnum'
+        placed_at:
+          type: string
+          format: date-time
+        settled_at:
+          type: string
+          format: date-time
+          nullable: true
+        payout:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+          nullable: true
+      required:
+      - id
+      - stake
+      - total_odds
+      - username
+    BetStatusEnum:
+      enum:
+      - accepted
+      - won
+      - lost
+      - cashed_out
+      - cancelled
+      type: string
+      description: |-
+        * `accepted` - Aceptada
+        * `won` - Ganada
+        * `lost` - Perdida
+        * `cashed_out` - Cobrada Anticipadamente
+        * `cancelled` - Cancelada
+    Bonus:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        tipo:
+          $ref: '#/components/schemas/BonusTipoEnum'
+        nombre:
+          type: string
+          maxLength: 100
+        descripcion:
+          type: string
+        porcentaje:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        monto_max:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+        rollover_requerido:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        activo:
+          type: boolean
+      required:
+      - id
+      - nombre
+      - tipo
+    BonusTipoEnum:
+      enum:
+      - bienvenida
+      - recarga
+      type: string
+      description: |-
+        * `bienvenida` - Bono de Bienvenida
+        * `recarga` - Bono de Recarga
+    CashOut:
+      type: object
+      properties:
+        idempotency_key:
+          type: string
+          maxLength: 128
+    DepositLimits:
+      type: object
+      properties:
+        limite_diario:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+        limite_semanal:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+        limite_mensual:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+        limite_apuesta_max:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+        limite_perdida_diaria:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+    EventDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        sport:
+          allOf:
+          - $ref: '#/components/schemas/Sport'
+          readOnly: true
+        team_home:
+          type: string
+          maxLength: 200
+        team_away:
+          type: string
+          maxLength: 200
+        start_time:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/StatusF65Enum'
+        created_at:
+          type: string
+          format: date-time
+        markets:
+          type: array
+          items:
+            $ref: '#/components/schemas/Market'
+          readOnly: true
+      required:
+      - id
+      - markets
+      - sport
+      - start_time
+      - team_away
+      - team_home
+    EventList:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        sport:
+          type: integer
+        sport_name:
+          type: string
+          readOnly: true
+        team_home:
+          type: string
+          maxLength: 200
+        team_away:
+          type: string
+          maxLength: 200
+        start_time:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/StatusF65Enum'
+        market_count:
+          type: string
+          readOnly: true
+        main_odds:
+          type: string
+          readOnly: true
+      required:
+      - id
+      - main_odds
+      - market_count
+      - sport
+      - sport_name
+      - start_time
+      - team_away
+      - team_home
+    Login:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          writeOnly: true
+      required:
+      - password
+      - username
+    Market:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        type:
+          $ref: '#/components/schemas/TypeEnum'
+        name:
+          type: string
+          maxLength: 200
+        is_live:
+          type: boolean
+        selections:
+          type: array
+          items:
+            $ref: '#/components/schemas/Selection'
+          readOnly: true
+      required:
+      - id
+      - name
+      - selections
+      - type
+    Metrics:
+      type: object
+      properties:
+        total_stakes:
+          type: string
+        total_payouts:
+          type: string
+        ggr:
+          type: string
+        total_bets:
+          type: integer
+        active_users:
+          type: integer
+          default: 0
+        active_bets:
+          type: integer
+          default: 0
+      required:
+      - ggr
+      - total_bets
+      - total_payouts
+      - total_stakes
+    PaginatedAuditLogList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLog'
+    PaginatedBetList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Bet'
+    PaginatedBonusList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Bonus'
+    PaginatedEventListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventList'
+    PaginatedSportList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Sport'
+    PaginatedSuspiciousActivityList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SuspiciousActivity'
+    PaginatedUserBonusList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserBonus'
+    PeriodoEnum:
+      enum:
+      - 7d
+      - 30d
+      - 90d
+      - indefinida
+      type: string
+      description: |-
+        * `7d` - 7d
+        * `30d` - 30d
+        * `90d` - 90d
+        * `indefinida` - indefinida
+    Recargar:
+      type: object
+      properties:
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+        reference:
+          type: string
+          maxLength: 100
+        idempotency_key:
+          type: string
+          maxLength: 128
+      required:
+      - amount
+    Register:
+      type: object
+      properties:
+        username:
+          type: string
+          title: Nombre de usuario
+          description: 'Requerido. 150 carácteres como máximo. Únicamente letras,
+            dígitos y @/./+/-/_ '
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          writeOnly: true
+          minLength: 8
+        dni:
+          type: string
+          maxLength: 8
+          minLength: 8
+        fecha_nacimiento:
+          type: string
+          format: date
+      required:
+      - dni
+      - email
+      - fecha_nacimiento
+      - password
+      - username
+    Retirar:
+      type: object
+      properties:
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+        reference:
+          type: string
+          maxLength: 100
+        idempotency_key:
+          type: string
+          maxLength: 128
+      required:
+      - amount
+    Selection:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        odds:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+        is_winner:
+          type: boolean
+          nullable: true
+      required:
+      - id
+      - name
+      - odds
+    SeveridadEnum:
+      enum:
+      - low
+      - medium
+      - high
+      type: string
+      description: |-
+        * `low` - Baja
+        * `medium` - Media
+        * `high` - Alta
+    SistemaTipoEnum:
+      enum:
+      - trixie
+      - yankee
+      - patent
+      - lucky15
+      type: string
+      description: |-
+        * `trixie` - trixie
+        * `yankee` - yankee
+        * `patent` - patent
+        * `lucky15` - lucky15
+    Sport:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        slug:
+          type: string
+          maxLength: 100
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - id
+      - name
+      - slug
+    StatusF65Enum:
+      enum:
+      - programado
+      - en_vivo
+      - finalizado
+      - suspendido
+      - anulado
+      type: string
+      description: |-
+        * `programado` - Programado
+        * `en_vivo` - En Vivo
+        * `finalizado` - Finalizado
+        * `suspendido` - Suspendido
+        * `anulado` - Anulado
+    SuspiciousActivity:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+        tipo:
+          $ref: '#/components/schemas/SuspiciousActivityTipoEnum'
+        descripcion:
+          type: string
+        severidad:
+          $ref: '#/components/schemas/SeveridadEnum'
+        resuelto:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - descripcion
+      - id
+      - tipo
+      - username
+    SuspiciousActivityTipoEnum:
+      enum:
+      - misma_ip
+      - patron_identico
+      - deposito_cashout
+      - multiple_accounts
+      - stake_anomaly
+      type: string
+      description: |-
+        * `misma_ip` - Misma IP
+        * `patron_identico` - Patron Identico
+        * `deposito_cashout` - Deposito + Cash-out
+        * `multiple_accounts` - Multiples Cuentas
+        * `stake_anomaly` - Stake Anomalo
+    TokenResponse:
+      type: object
+      properties:
+        access:
+          type: string
+          description: Token de acceso (usar este en Swagger Authorize)
+        refresh:
+          type: string
+          description: Token de refresco
+        user:
+          type: object
+          additionalProperties: {}
+      required:
+      - access
+      - refresh
+      - user
+    TypeEnum:
+      enum:
+      - 1X2
+      - DOUBLE_CHANCE
+      - DRAW_NO_BET
+      - OU_05
+      - OU_15
+      - OU_25
+      - OU_35
+      - OU_45
+      - BTTS
+      - BTTS_OU25
+      - HOME_OU_15
+      - AWAY_OU_05
+      - HT_FT
+      - HT_1X2
+      - HT_OU_15
+      - HC_0
+      - HC_M05
+      - HC_M1
+      - HC_M15
+      - HC_M2
+      - HC_EURO
+      - CORRECT_SCORE
+      - ODD_EVEN
+      - BTTS_1H
+      - CLEAN_HOME
+      - CLEAN_AWAY
+      - FIRST_SCORE
+      - MULTI_HOME
+      - MULTI_AWAY
+      - CORNERS_OU
+      - TENNIS_WINNER
+      - TENNIS_HC
+      - TENNIS_TOTAL
+      - TENNIS_SET
+      - TENNIS_SET1
+      - TENNIS_SET1_TOT
+      - TENNIS_BOTH
+      - BASKET_ML
+      - BASKET_SPREAD
+      - BASKET_TOTAL
+      - BASKET_HT_SPR
+      - BASKET_HT_ML
+      - BASKET_HOME_TOT
+      type: string
+      description: |-
+        * `1X2` - Ganador de Partido
+        * `DOUBLE_CHANCE` - Doble Oportunidad
+        * `DRAW_NO_BET` - Draw No Bet
+        * `OU_05` - Over/Under 0.5 Goles
+        * `OU_15` - Over/Under 1.5 Goles
+        * `OU_25` - Over/Under 2.5 Goles
+        * `OU_35` - Over/Under 3.5 Goles
+        * `OU_45` - Over/Under 4.5 Goles
+        * `BTTS` - Ambos Equipos Anotan
+        * `BTTS_OU25` - BTTS + Over/Under 2.5
+        * `HOME_OU_15` - Total Goles Local O/U 1.5
+        * `AWAY_OU_05` - Total Goles Visitante O/U 0.5
+        * `HT_FT` - Resultado Descanso/Final
+        * `HT_1X2` - Primer Tiempo 1X2
+        * `HT_OU_15` - Primer Tiempo O/U 1.5
+        * `HC_0` - Handicap Asiatico 0
+        * `HC_M05` - Handicap Asiatico -0.5
+        * `HC_M1` - Handicap Asiatico -1
+        * `HC_M15` - Handicap Asiatico -1.5
+        * `HC_M2` - Handicap Asiatico -2
+        * `HC_EURO` - Handicap Europeo -1
+        * `CORRECT_SCORE` - Marcador Exacto
+        * `ODD_EVEN` - Par/Impar Goles
+        * `BTTS_1H` - Ambos Marcan 1er Tiempo
+        * `CLEAN_HOME` - Clean Sheet Local
+        * `CLEAN_AWAY` - Clean Sheet Visitante
+        * `FIRST_SCORE` - Primer Equipo en Anotar
+        * `MULTI_HOME` - Multi-Goles Local
+        * `MULTI_AWAY` - Multi-Goles Visitante
+        * `CORNERS_OU` - Córneres O/U 9.5
+        * `TENNIS_WINNER` - Ganador del Partido
+        * `TENNIS_HC` - Hándicap Juegos
+        * `TENNIS_TOTAL` - Total Juegos O/U
+        * `TENNIS_SET` - Set Betting
+        * `TENNIS_SET1` - Primer Set Ganador
+        * `TENNIS_SET1_TOT` - Total Juegos Set 1 O/U
+        * `TENNIS_BOTH` - Ambos Ganaran un Set
+        * `BASKET_ML` - Moneyline
+        * `BASKET_SPREAD` - Spread
+        * `BASKET_TOTAL` - Total Puntos O/U
+        * `BASKET_HT_SPR` - Handicap Mitad
+        * `BASKET_HT_ML` - Mitad 1X2
+        * `BASKET_HOME_TOT` - Total Puntos Local O/U
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          title: Nombre de usuario
+          description: 'Requerido. 150 carácteres como máximo. Únicamente letras,
+            dígitos y @/./+/-/_ '
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        dni:
+          type: string
+          readOnly: true
+        estado_cuenta:
+          type: string
+          readOnly: true
+        date_joined:
+          type: string
+          format: date-time
+      required:
+      - dni
+      - email
+      - estado_cuenta
+      - id
+      - username
+    UserBonus:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        bonus:
+          allOf:
+          - $ref: '#/components/schemas/Bonus'
+          readOnly: true
+        saldo_bono:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+        rollover_completado:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+        rollover_restante:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,4})?$
+          readOnly: true
+        rollover_porcentaje:
+          type: integer
+          readOnly: true
+        rollover_completo:
+          type: boolean
+          readOnly: true
+        fecha_otorgado:
+          type: string
+          format: date-time
+        fecha_expiracion:
+          type: string
+          format: date-time
+          nullable: true
+        activo:
+          type: boolean
+      required:
+      - bonus
+      - id
+      - rollover_completo
+      - rollover_porcentaje
+      - rollover_restante
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
