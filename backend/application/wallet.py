@@ -19,6 +19,12 @@ class RetirarSerializer(serializers.Serializer):
     idempotency_key = serializers.CharField(max_length=128, required=False, allow_blank=True)
 
 
+class TransferirSerializer(serializers.Serializer):
+    to_username = serializers.CharField()
+    amount = serializers.DecimalField(max_digits=18, decimal_places=4, min_value=Decimal('0.0001'))
+    idempotency_key = serializers.CharField(max_length=128, required=False, allow_blank=True)
+
+
 def get_balance(user, account_type='main'):
     account = Account.objects.get(user=user, type=account_type)
     credits = LedgerEntry.objects.filter(account=account, direction='CREDIT').aggregate(
@@ -55,17 +61,30 @@ def create_double_entry(from_account, to_account, amount, description, reference
 
 
 def recargar(user, amount, description='Recarga de cuenta', reference=''):
-    casa = Account.objects.get(type='casa')
-    wallet = Account.objects.get(user=user, type='main')
-    return create_double_entry(casa, wallet, amount, description, reference)
+    try:
+        casa = Account.objects.get(type='casa')
+    except Account.DoesNotExist:
+        raise ValueError('Sistema no configurado: falta cuenta casa. Ejecuta seed_demo.')
+    with transaction.atomic():
+        casa = Account.objects.select_for_update().get(id=casa.id)
+        wallet = Account.objects.select_for_update().get(user=user, type='main')
+        return create_double_entry(casa, wallet, amount, description, reference)
 
 
 def retirar(user, amount, description='Retiro de cuenta', reference=''):
-    wallet = Account.objects.get(user=user, type='main')
-    if get_balance(user, 'main') < amount:
-        raise ValueError('Saldo insuficiente')
-    casa = Account.objects.get(type='casa')
-    return create_double_entry(wallet, casa, amount, description, reference)
+    try:
+        wallet = Account.objects.get(user=user, type='main')
+    except Account.DoesNotExist:
+        raise ValueError('No tienes una cuenta principal. Contacta al administrador.')
+    with transaction.atomic():
+        wallet = Account.objects.select_for_update().get(id=wallet.id)
+        if get_balance(user, 'main') < amount:
+            raise ValueError('Saldo insuficiente')
+        try:
+            casa = Account.objects.select_for_update().get(type='casa')
+        except Account.DoesNotExist:
+            raise ValueError('Sistema no configurado: falta cuenta casa. Ejecuta seed_demo.')
+        return create_double_entry(wallet, casa, amount, description, reference)
 
 
 def transferir(from_user, to_user, amount, description='Transferencia', reference=''):
