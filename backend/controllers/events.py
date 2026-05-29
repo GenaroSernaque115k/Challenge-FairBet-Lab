@@ -139,3 +139,47 @@ class ChangeEventStatusView(generics.GenericAPIView):
             'old_status': old_status,
             'new_status': event.status,
         })
+
+
+class SetSelectionWinnerView(generics.GenericAPIView):
+    permission_classes = [IsAdminUser]
+
+    @extend_schema(
+        summary='Marcar seleccion como ganadora (admin)',
+        description='Define si una seleccion es ganadora (is_winner=True/False). '
+                    'Usado para liquidar apuestas automaticamente.',
+        request=OpenApiTypes.OBJECT,
+        responses={
+            200: OpenApiTypes.OBJECT,
+            400: OpenApiTypes.OBJECT,
+            404: OpenApiTypes.OBJECT,
+        },
+        examples=[
+            OpenApiExample('Marcar ganadora', value={'is_winner': True}),
+            OpenApiExample('Marcar perdedora', value={'is_winner': False}),
+        ],
+    )
+    def post(self, request, selection_id):
+        from infrastructure.events import Selection
+        try:
+            sel = Selection.objects.select_related('market__event').get(id=selection_id)
+        except Selection.DoesNotExist:
+            return Response({'error': 'Seleccion no encontrada'}, status=status.HTTP_404_NOT_FOUND)
+
+        is_winner = request.data.get('is_winner')
+        if not isinstance(is_winner, bool):
+            return Response(
+                {'error': 'El campo is_winner debe ser true o false'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        sel.is_winner = is_winner
+        sel.save()
+
+        return Response({
+            'selection_id': sel.id,
+            'selection_name': sel.name,
+            'market': sel.market.name,
+            'event': str(sel.market.event),
+            'is_winner': sel.is_winner,
+        })

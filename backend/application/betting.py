@@ -60,8 +60,8 @@ def validar_usuario_apto(user) -> str | None:
         profile = user.profile
     except UserProfile.DoesNotExist:
         return 'Perfil no encontrado'
-    if profile.estado_cuenta in ('bloqueado', 'autoexcluido'):
-        return f'Cuenta {profile.estado_cuenta}. No se permiten apuestas.'
+    if profile.estado_cuenta != 'verificado':
+        return f'Cuenta {profile.estado_cuenta}. Solo cuentas verificadas pueden apostar.'
     return None
 
 
@@ -112,10 +112,6 @@ def realizar_apuesta(user, selections_data: list[dict], stake: Decimal,
     from application.wallet import get_balance as wallet_balance
     from infrastructure.wallet import Account
 
-    balance = wallet_balance(user, 'main')
-    if balance < stake:
-        raise ValueError(f'Saldo insuficiente. Disponible: {balance} BP')
-
     with transaction.atomic():
         wallet = Account.objects.select_for_update().get(user=user, type='main')
         apuestas = Account.objects.select_for_update().get(type='apuestas_pendientes')
@@ -131,7 +127,7 @@ def realizar_apuesta(user, selections_data: list[dict], stake: Decimal,
         from application.wallet import create_double_entry
         create_double_entry(wallet, apuestas, stake, f'Apuesta #{bet.id}')
 
-    process_rollover_contribution(user, stake, Decimal(min(float(s.odds_at_time) for s in bet.selections.all())))
+    process_rollover_contribution(user, stake, min(s.odds_at_time for s in bet.selections.all()))
 
     return bet
 

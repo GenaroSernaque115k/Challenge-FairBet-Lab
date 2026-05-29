@@ -171,12 +171,20 @@ class LiquidarApuestaView(generics.GenericAPIView):
     @extend_schema(
         summary='Liquidar apuesta (admin)',
         description='Resuelve el resultado de una apuesta. '
-                    'Calcula payout automaticamente y mueve fondos via partida doble.',
+                    'Calcula payout automaticamente y mueve fondos via partida doble. '
+                    'Si se envia winning_selection_ids, esos IDs se consideran ganadores.',
         request=OpenApiTypes.OBJECT,
         responses={
             200: BetSerializer,
             400: OpenApiTypes.OBJECT,
         },
+        examples=[
+            OpenApiExample(
+                'Liquidar con IDs ganadores',
+                value={'winning_selection_ids': [5920, 5922]},
+                request_only=True,
+            ),
+        ],
     )
     def post(self, request, bet_id):
         winning_ids = request.data.get('winning_selection_ids')
