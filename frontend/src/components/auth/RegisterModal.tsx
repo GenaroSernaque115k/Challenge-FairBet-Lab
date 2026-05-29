@@ -17,6 +17,7 @@ export default function RegisterModal({ onClose, onLoginClick }: RegisterModalPr
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [isAdult, setIsAdult] = useState(false)
   const { register } = useAuth()
   const overlayRef = useRef<HTMLDivElement>(null)
 
@@ -124,9 +125,21 @@ export default function RegisterModal({ onClose, onLoginClick }: RegisterModalPr
               required
             />
           </div>
+          <label className="flex items-start gap-2 text-xs text-gray-400 mt-1 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isAdult}
+              onChange={(e) => setIsAdult(e.target.checked)}
+              className="mt-0.5 accent-primary-500"
+            />
+            <span>
+              Declaro ser mayor de 18 años y acepto los{' '}
+              <a href="#" className="text-primary-400 underline">Términos y Condiciones</a>
+            </span>
+          </label>
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !isAdult}
             className="w-full bg-primary-500 hover:bg-primary-400 disabled:opacity-50 text-black font-semibold py-2.5 rounded-lg transition"
           >
             {loading ? 'Registrando...' : 'Registrarse'}
