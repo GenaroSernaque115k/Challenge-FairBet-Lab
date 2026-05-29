@@ -1,7 +1,7 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiTypes
 
 from infrastructure.events import Event, Market, Sport
@@ -96,3 +96,46 @@ class SportListView(generics.ListAPIView):
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
+
+
+class ChangeEventStatusView(generics.GenericAPIView):
+    permission_classes = [IsAdminUser]
+
+    @extend_schema(
+        summary='Cambiar estado de evento (admin)',
+        description='Permite al administrador cambiar el estado de un evento: programado, en_vivo, finalizado, suspendido, anulado.',
+        request=OpenApiTypes.OBJECT,
+        responses={
+            200: OpenApiTypes.OBJECT,
+            400: OpenApiTypes.OBJECT,
+            404: OpenApiTypes.OBJECT,
+        },
+        examples=[
+            OpenApiExample('Suspender evento', value={'status': 'suspendido'}),
+            OpenApiExample('Anular evento', value={'status': 'anulado'}),
+        ],
+    )
+    def post(self, request, event_id):
+        try:
+            event = Event.objects.select_related('sport').get(id=event_id)
+        except Event.DoesNotExist:
+            return Response({'error': 'Evento no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+        new_status = request.data.get('status')
+        valid_statuses = [s[0] for s in Event.Status.choices]
+        if new_status not in valid_statuses:
+            return Response(
+                {'error': f'Estado invalido. Opciones: {valid_statuses}'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        old_status = event.status
+        event.status = new_status
+        event.save()
+
+        return Response({
+            'event_id': event.id,
+            'event_name': str(event),
+            'old_status': old_status,
+            'new_status': event.status,
+        })
