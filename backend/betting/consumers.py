@@ -1,7 +1,9 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
-from infrastructure.events import Event, Market, Selection
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 from channels.db import database_sync_to_async
+from infrastructure.events import Event, Market, Selection
 
 
 class EventOddsConsumer(AsyncWebsocketConsumer):
@@ -25,6 +27,13 @@ class EventOddsConsumer(AsyncWebsocketConsumer):
             'selection_id': event['selection_id'],
             'old_odds': str(event['old_odds']),
             'new_odds': str(event['new_odds']),
+        }))
+
+    async def market_suspension(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'market_suspension',
+            'reason': event.get('reason', 'evento_critico'),
+            'duration': event.get('duration', 30),
         }))
 
     @database_sync_to_async
@@ -54,3 +63,16 @@ class EventOddsConsumer(AsyncWebsocketConsumer):
             'status': event.status,
             'markets': markets,
         }
+
+
+def suspender_mercado_por_evento_critico(event_id: int, segundos: int = 30):
+    channel_layer = get_channel_layer()
+    group_name = f'event_{event_id}'
+    async_to_sync(channel_layer.group_send)(
+        group_name,
+        {
+            'type': 'market_suspension',
+            'reason': 'evento_critico',
+            'duration': segundos,
+        },
+    )

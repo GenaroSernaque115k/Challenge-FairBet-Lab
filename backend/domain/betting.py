@@ -48,7 +48,7 @@ def validate_mutual_exclusion(market_type: str, selection_names: list[str]):
 
 
 def validate_event_not_started(event_status: str) -> Optional[str]:
-    if event_status in ('en_vivo', 'finalizado', 'suspendido', 'anulado'):
+    if event_status in ('finalizado', 'suspendido', 'anulado'):
         return f'No se puede apostar en evento con estado: {event_status}'
     return None
 

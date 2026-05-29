@@ -91,4 +91,8 @@ class Command(BaseCommand):
             f'Bonos creados: {bono_bienvenida.nombre}, {bono_recarga.nombre}'
         ))
 
+        from django.core.management import call_command
+        self.stdout.write('Sembrando eventos deportivos...')
+        call_command('seed_massive_events')
+
         self.stdout.write(self.style.SUCCESS('Seed completo'))
