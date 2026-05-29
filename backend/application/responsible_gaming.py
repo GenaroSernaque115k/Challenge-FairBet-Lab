@@ -162,7 +162,7 @@ def validate_user_limits(user, stake: Decimal) -> str | None:
     try:
         limits = user.deposit_limits
     except DepositLimits.DoesNotExist:
-    return None
+        return None
 
 
 def validate_deposit_limits(user, amount: Decimal) -> str | None:
