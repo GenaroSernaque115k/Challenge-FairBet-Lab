@@ -61,6 +61,10 @@ def create_double_entry(from_account, to_account, amount, description, reference
 
 
 def recargar(user, amount, description='Recarga de cuenta', reference=''):
+    from application.responsible_gaming import validate_deposit_limits
+    error = validate_deposit_limits(user, amount)
+    if error:
+        raise ValueError(error)
     try:
         casa = Account.objects.get(type='casa')
     except Account.DoesNotExist:

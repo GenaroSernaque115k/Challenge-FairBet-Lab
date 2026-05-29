@@ -162,7 +162,52 @@ def validate_user_limits(user, stake: Decimal) -> str | None:
     try:
         limits = user.deposit_limits
     except DepositLimits.DoesNotExist:
+    return None
+
+
+def validate_deposit_limits(user, amount: Decimal) -> str | None:
+    from datetime import timedelta
+    from django.db import models
+    from infrastructure.wallet import LedgerEntry
+
+    try:
+        limits = user.deposit_limits
+    except DepositLimits.DoesNotExist:
         return None
+
+    now = timezone.now()
+
+    if limits.limite_diario and limits.limite_diario > Decimal('0'):
+        hoy = now.date()
+        deposited_today = LedgerEntry.objects.filter(
+            account__user=user, account__type='main',
+            direction='CREDIT', created_at__date=hoy,
+            description__contains='Recarga',
+        ).aggregate(total=models.Sum('amount'))['total'] or Decimal('0')
+        if deposited_today + amount > limits.limite_diario:
+            return f'Excede el limite diario de deposito ({limits.limite_diario} BP). Llevas {deposited_today} BP hoy.'
+
+    if limits.limite_semanal and limits.limite_semanal > Decimal('0'):
+        inicio_semana = now.date() - timedelta(days=now.weekday())
+        deposited_week = LedgerEntry.objects.filter(
+            account__user=user, account__type='main',
+            direction='CREDIT', created_at__date__gte=inicio_semana,
+            description__contains='Recarga',
+        ).aggregate(total=models.Sum('amount'))['total'] or Decimal('0')
+        if deposited_week + amount > limits.limite_semanal:
+            return f'Excede el limite semanal de deposito ({limits.limite_semanal} BP). Llevas {deposited_week} BP esta semana.'
+
+    if limits.limite_mensual and limits.limite_mensual > Decimal('0'):
+        inicio_mes = now.replace(day=1).date()
+        deposited_month = LedgerEntry.objects.filter(
+            account__user=user, account__type='main',
+            direction='CREDIT', created_at__date__gte=inicio_mes,
+            description__contains='Recarga',
+        ).aggregate(total=models.Sum('amount'))['total'] or Decimal('0')
+        if deposited_month + amount > limits.limite_mensual:
+            return f'Excede el limite mensual de deposito ({limits.limite_mensual} BP). Llevas {deposited_month} BP este mes.'
+
+    return None
 
     if limits.limite_apuesta_max and limits.limite_apuesta_max > Decimal('0'):
         if stake > limits.limite_apuesta_max:
