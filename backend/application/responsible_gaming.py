@@ -164,6 +164,23 @@ def validate_user_limits(user, stake: Decimal) -> str | None:
     except DepositLimits.DoesNotExist:
         return None
 
+    if limits.limite_apuesta_max and limits.limite_apuesta_max > Decimal('0'):
+        if stake > limits.limite_apuesta_max:
+            return f'La apuesta excede tu limite maximo de {limits.limite_apuesta_max} BP'
+
+    if limits.limite_perdida_diaria and limits.limite_perdida_diaria > Decimal('0'):
+        hoy = timezone.now().date()
+        bets_today = Bet.objects.filter(
+            user=user,
+            placed_at__date=hoy,
+            status__in=('lost', 'cashed_out'),
+        )
+        perdido_hoy = sum((b.stake for b in bets_today), Decimal('0'))
+        if perdido_hoy + stake > limits.limite_perdida_diaria:
+            return f'Con esta apuesta excederias tu limite de perdida diaria de {limits.limite_perdida_diaria} BP'
+
+    return None
+
 
 def validate_deposit_limits(user, amount: Decimal) -> str | None:
     from datetime import timedelta
@@ -206,22 +223,5 @@ def validate_deposit_limits(user, amount: Decimal) -> str | None:
         ).aggregate(total=models.Sum('amount'))['total'] or Decimal('0')
         if deposited_month + amount > limits.limite_mensual:
             return f'Excede el limite mensual de deposito ({limits.limite_mensual} BP). Llevas {deposited_month} BP este mes.'
-
-    return None
-
-    if limits.limite_apuesta_max and limits.limite_apuesta_max > Decimal('0'):
-        if stake > limits.limite_apuesta_max:
-            return f'La apuesta excede tu limite maximo de {limits.limite_apuesta_max} BP'
-
-    if limits.limite_perdida_diaria and limits.limite_perdida_diaria > Decimal('0'):
-        hoy = timezone.now().date()
-        bets_today = Bet.objects.filter(
-            user=user,
-            placed_at__date=hoy,
-            status__in=('lost', 'cashed_out'),
-        )
-        perdido_hoy = sum((b.stake for b in bets_today), Decimal('0'))
-        if perdido_hoy + stake > limits.limite_perdida_diaria:
-            return f'Con esta apuesta excederias tu limite de perdida diaria de {limits.limite_perdida_diaria} BP'
 
     return None
