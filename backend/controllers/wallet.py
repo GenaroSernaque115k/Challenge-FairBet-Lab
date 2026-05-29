@@ -115,12 +115,12 @@ class RetirarView(generics.GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
-            new_balance = retirar(
+            retirar(
                 request.user,
                 serializer.validated_data['amount'],
                 reference=serializer.validated_data.get('reference', ''),
             )
-            response_data = {'balance': str(new_balance)}
+            response_data = {'balance': str(get_balance(request.user, 'main'))}
             if key:
                 IdempotencyKey.objects.get_or_create(
                     key=key, user=request.user,
@@ -199,12 +199,12 @@ class TransferirView(generics.GenericAPIView):
             )
 
         try:
-            new_balance = transferir(
+            transferir(
                 request.user,
                 to_user,
                 serializer.validated_data['amount'],
             )
-            response_data = {'balance': str(new_balance)}
+            response_data = {'balance': str(get_balance(request.user, 'main'))}
             if key:
                 IdempotencyKey.objects.get_or_create(
                     key=key, user=request.user,
