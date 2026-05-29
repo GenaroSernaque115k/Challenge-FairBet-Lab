@@ -1,3 +1,3 @@
-from controllers.users import RegisterView, LoginView, MeView
+from controllers.users import RegisterView, LoginView, MeView, VerifyUserView
 
-__all__ = ['RegisterView', 'LoginView', 'MeView']
+__all__ = ['RegisterView', 'LoginView', 'MeView', 'VerifyUserView']

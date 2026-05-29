@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model, authenticate
 from rest_framework import generics, status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -114,3 +114,35 @@ class MeView(generics.RetrieveAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class VerifyUserView(generics.GenericAPIView):
+    permission_classes = [IsAdminUser]
+
+    @extend_schema(
+        summary='Verificar usuario manualmente (admin)',
+        description='Cambia el estado de un usuario de pendiente_verificacion a verificado. Solo admin.',
+        responses={
+            200: OpenApiTypes.OBJECT,
+            400: OpenApiTypes.OBJECT,
+            404: OpenApiTypes.OBJECT,
+        },
+    )
+    def post(self, request, user_id):
+        from infrastructure.users import UserProfile
+        try:
+            profile = UserProfile.objects.select_related('user').get(user_id=user_id)
+        except UserProfile.DoesNotExist:
+            return Response({'error': 'Usuario no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+        if profile.estado_cuenta != 'pendiente_verificacion':
+            return Response(
+                {'error': f'El usuario ya esta en estado {profile.estado_cuenta}'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        profile.estado_cuenta = 'verificado'
+        profile.save()
+        return Response({
+            'mensaje': f'Usuario {profile.user.username} verificado correctamente',
+            'user_id': profile.user_id,
+            'estado_cuenta': profile.estado_cuenta,
+        })
