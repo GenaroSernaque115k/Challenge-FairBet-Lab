@@ -82,6 +82,9 @@ export default function SportDetailView({ sportSlug, sportName, onBack, onSelect
           </div>
         </div>
       ))}
+      <p className="text-[9px] text-gray-600 mt-2 text-center">
+        Juega con responsabilidad. El juego en exceso puede causar adicción.
+      </p>
     </div>
   )
 }

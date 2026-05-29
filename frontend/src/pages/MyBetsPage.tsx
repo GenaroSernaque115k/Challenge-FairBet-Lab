@@ -69,6 +69,9 @@ export default function MyBetsPage() {
           ))}
         </div>
       )}
+      <p className="text-[9px] text-gray-600 mt-4 text-center">
+        Juega con responsabilidad. El juego en exceso puede causar adicción.
+      </p>
     </div>
   )
 }
