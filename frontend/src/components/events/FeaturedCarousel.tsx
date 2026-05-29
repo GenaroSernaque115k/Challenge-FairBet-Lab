@@ -65,6 +65,9 @@ export default function FeaturedCarousel({ events, onSelectOdds, selectedIds, on
           <ChevronRight className="w-4 h-4" />
         </button>
       )}
+    <p className="text-[9px] text-gray-600 mt-2 text-center">
+      Juega con responsabilidad. El juego en exceso puede causar adicción.
+    </p>
     </div>
   )
 }

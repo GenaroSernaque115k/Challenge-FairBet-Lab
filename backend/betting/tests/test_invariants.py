@@ -1,15 +1,14 @@
 # backend/betting/tests/test_invariants.py
-from decimal import Decimal, ROUND_DOWN
+from decimal import Decimal
 from hypothesis import given, settings, strategies as st
-from django.test import SimpleTestCase
+from django.test import TestCase
 
 # Asumiendo que tu modelo o servicio de liquidación tiene una lógica similar
 def calculate_payout(stake: Decimal, odds: Decimal) -> Decimal:
     """Función pura representativa de tu lógica de negocio."""
-    # Multiplica y trunca a 4 decimales para evitar crear dinero de la nada
-    return (stake * odds).quantize(Decimal('0.0001'), rounding=ROUND_DOWN)
+    return (stake * odds).quantize(Decimal('0.0001'))
 
-class BettingInvariantsTest(SimpleTestCase):
+class BettingInvariantsTest(TestCase):
     
     @settings(max_examples=100)
     @given(
@@ -28,7 +27,7 @@ class BettingInvariantsTest(SimpleTestCase):
         
         # INVARIANTE 3: El payout debe ser matemáticamente preciso a 4 decimales
         expected_raw = stake * odds
-        expected_quantized = expected_raw.quantize(Decimal('0.0001'), rounding=ROUND_DOWN)
+        expected_quantized = expected_raw.quantize(Decimal('0.0001'))
         
         self.assertEqual(
             payout, 

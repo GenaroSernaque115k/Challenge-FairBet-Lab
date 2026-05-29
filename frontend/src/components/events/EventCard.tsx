@@ -167,6 +167,9 @@ export default function EventCard({ event, onSelect, selectedIds, compact, featu
           </div>
         )}
       </div>
+    <p className="text-[9px] text-gray-600 mt-2 text-center">
+      Juega con responsabilidad. El juego en exceso puede causar adicción.
+    </p>
     </div>
   )
 }

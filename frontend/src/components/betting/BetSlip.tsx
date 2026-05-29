@@ -37,7 +37,7 @@ export default function BetSlip({ selections, onRemove, onClear, onBetPlaced }: 
   const [error, setError] = useState('')
   const { setBalance } = useBalanceStore()
 
-  const totalOdds = selections.reduce((acc, s) => acc * parseFloat(s.odds), 1)
+  const totalOdds = selections.reduce((acc, s) => acc * Number(s.odds), 1)
 
   const handleBet = async () => {
     setError('')
@@ -113,7 +113,7 @@ export default function BetSlip({ selections, onRemove, onClear, onBetPlaced }: 
             <div key={sel.selectionId} className="flex items-center justify-between bg-black rounded-lg p-3">
               <div className="min-w-0 flex-1">
                 <p className="text-xs truncate">{sel.eventHome} vs {sel.eventAway}</p>
-                <p className="text-[11px] text-primary-400">{sel.name} @ {parseFloat(sel.odds).toFixed(2)}</p>
+                <p className="text-[11px] text-primary-400">{sel.name} @ {Number(sel.odds).toFixed(2)}</p>
               </div>
               <button onClick={() => onRemove(sel.selectionId)} className="text-gray-600 hover:text-red-400 ml-2">
                 <X className="w-3.5 h-3.5" />
@@ -158,7 +158,7 @@ export default function BetSlip({ selections, onRemove, onClear, onBetPlaced }: 
             <div className="flex justify-between text-xs font-bold">
               <span className="text-gray-400">Ganancia posible</span>
               <span className="text-green-500">
-                {stake ? (parseFloat(stake) * totalOdds).toFixed(2) : '0.00'} BP
+                {stake ? (Number(stake) * totalOdds).toFixed(2) : '0.00'} BP
               </span>
             </div>
           </div>
@@ -175,7 +175,7 @@ export default function BetSlip({ selections, onRemove, onClear, onBetPlaced }: 
 
           <button
             onClick={handleBet}
-            disabled={loading || !stake || parseFloat(stake) <= 0}
+            disabled={loading || !stake || Number(stake) <= 0}
             className="w-full bg-primary-500 hover:bg-primary-400 disabled:opacity-50 text-black font-bold py-3 rounded-lg transition text-sm"
           >
             {loading ? 'Procesando...' : 'Realizar apuesta'}
