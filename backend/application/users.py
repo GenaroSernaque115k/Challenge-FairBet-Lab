@@ -25,6 +25,14 @@ class RegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('DNI ya registrado')
         return value
 
+    def validate_fecha_nacimiento(self, value):
+        from datetime import date
+        today = date.today()
+        age = today.year - value.year - ((today.month, today.day) < (value.month, value.day))
+        if age < 18:
+            raise serializers.ValidationError('Debes ser mayor de 18 años para registrarte')
+        return value
+
     @transaction.atomic
     def create(self, validated_data):
         dni = validated_data.pop('dni')
