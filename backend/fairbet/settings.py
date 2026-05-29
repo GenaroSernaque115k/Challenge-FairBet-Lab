@@ -109,7 +109,7 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '30/min',
         'user': '60/min',
-        'auth': '5/min',
+        'auth': '60/min',
         'apuesta': '30/min',
         'wallet': '10/min',
     },
