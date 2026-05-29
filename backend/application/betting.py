@@ -82,18 +82,17 @@ def realizar_apuesta(user, selections_data: list[dict], stake: Decimal,
 
     total_odds = Decimal('1.0000')
     selection_objs = []
-    event_ids = set()
+    seen_combos = {}  # {(event_id, market_id): selection_name}
 
     for sel_data in selections_data:
         sel_id = sel_data['selection_id']
         sel = Selection.objects.select_related('market__event').get(id=sel_id)
         selection_objs.append(sel)
         event = sel.market.event
+        market = sel.market
         event_error = validate_event_not_started(event.status)
         if event_error:
             raise ValueError(f'{event.team_home} vs {event.team_away}: {event_error}')
-        if is_combined and event.id in event_ids:
-            raise ValueError(f'No se puede apostar dos veces al mismo partido')
         odds_error = validate_odds(sel.odds)
         if odds_error:
             raise ValueError(f'{sel.name}: {odds_error}')
@@ -104,10 +103,31 @@ def realizar_apuesta(user, selections_data: list[dict], stake: Decimal,
                     f'Cuota de "{sel.name}" cambio de {expected} a {sel.odds}. Confirma.',
                     selection_id=sel_id, old_odds=expected, new_odds=sel.odds)
         total_odds *= sel.odds
-        event_ids.add(event.id)
 
-    if is_combined and len(event_ids) < len(selection_objs):
-        raise ValueError('No se puede combinar selecciones del mismo partido')
+        # Validacion de combinaciones: no repetir mismo mercado del mismo evento
+        combo_key = (event.id, market.id)
+        if is_combined and combo_key in seen_combos:
+            prev_sel = seen_combos[combo_key]
+            raise ValueError(
+                f'No se puede combinar "{sel.name}" con "{prev_sel}" '
+                f'del mismo mercado "{market.name}" en {event.team_home} vs {event.team_away}'
+            )
+        seen_combos[combo_key] = sel.name
+
+    # Validacion de exclusion mutua en 1X2 del mismo evento
+    if is_combined:
+        for (ev_id, mkt_id), sel_name in seen_combos.items():
+            market = Market.objects.get(id=mkt_id)
+            if market.type == '1X2':
+                names_in_event = [
+                    n for (e, m), n in seen_combos.items()
+                    if e == ev_id and m == mkt_id
+                ]
+                if len(names_in_event) > 1:
+                    raise ValueError(
+                        f'No se puede combinar selecciones mutuamente excluyentes '
+                        f'del mercado 1X2: {", ".join(names_in_event)}'
+                    )
 
     from application.wallet import get_balance as wallet_balance
     from infrastructure.wallet import Account
