@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from decimal import Decimal
 
 
 class Bonus(models.Model):
@@ -52,7 +53,7 @@ class UserBonus(models.Model):
         requerido = self.bonus.rollover_requerido * self.saldo_bono
         if requerido <= 0:
             return 100
-        return min(100, int(float(self.rollover_completado) / float(requerido) * 100))
+        return min(100, int((self.rollover_completado / requerido * Decimal('100')).quantize(Decimal('1'))))
 
     @property
     def rollover_completo(self):

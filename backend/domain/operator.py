@@ -31,7 +31,7 @@ def calcular_exposure(event_id: int) -> list[dict]:
     selections = Selection.objects.filter(market__event_id=event_id)
     bets = Bet.objects.filter(
         status='accepted',
-        betselection__selection__in=selections,
+        selections__selection__in=selections,
     ).distinct()
 
     exposure = []
@@ -68,18 +68,18 @@ def generar_reporte_csv(mes: int, anio: int):
     bets = Bet.objects.filter(
         placed_at__gte=desde,
         placed_at__lt=hasta,
-    ).select_related('user').prefetch_related('betselection_set__selection__market__event')
+    ).select_related('user').prefetch_related('selections__selection__market__event')
 
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(['Fecha', 'Usuario', 'Tipo Apuesta', 'Stake', 'Payout', 'Resultado', 'Evento', 'Mercado'])
 
     for bet in bets:
-        for bs in bet.betselection_set.all():
+        for bs in bet.selections.all():
             writer.writerow([
                 bet.placed_at.date().isoformat(),
                 bet.user.username,
-                'Simple' if bet.betselection_set.count() == 1 else 'Combinada',
+                'Simple' if bet.selections.count() == 1 else 'Combinada',
                 str(bet.stake),
                 str(bet.payout or '0'),
                 bet.status,
