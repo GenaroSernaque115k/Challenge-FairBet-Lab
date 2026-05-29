@@ -151,6 +151,8 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'America/Lima'
 
+EVENTS_MARGIN_FACTOR = os.environ.get('EVENTS_MARGIN_FACTOR', '0.06')
+
 CELERY_BEAT_SCHEDULE = {
     'check-fraud-patterns': {
         'task': 'audit.tasks.check_fraud_patterns',

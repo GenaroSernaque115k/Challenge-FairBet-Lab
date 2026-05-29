@@ -11,6 +11,7 @@ from domain.events import (
     generate_ht_ft, generate_correct_score, generate_handicap,
     generate_tennis_winner, generate_tennis_handicap, generate_set_betting,
     generate_basket_spread, SET_BETS, rand_odds,
+    calculate_odds_with_margin, MARGIN_FACTOR,
 )
 
 random.seed(42)
@@ -169,7 +170,10 @@ def mk(event, mkt_type, name, selections_list):
 
 
 def create_football_markets(event):
-    o1, oX, o2 = generate_1X2()
+    from django.conf import settings
+    margin = Decimal(settings.EVENTS_MARGIN_FACTOR)
+    raw_1X2 = generate_1X2()
+    o1, oX, o2 = calculate_odds_with_margin(raw_1X2, margin) if margin > 0 else raw_1X2
     mk(event, '1X2', 'Ganador de Partido', [('Local', o1), ('Empate', oX), ('Visitante', o2)])
 
     dc = generate_double_chance(o1, oX, o2)
@@ -271,8 +275,11 @@ def create_football_markets(event):
 
 
 def create_tennis_markets(event):
+    from django.conf import settings
+    margin = Decimal(settings.EVENTS_MARGIN_FACTOR)
     p1, p2 = event.team_home, event.team_away
-    w1, w2 = generate_tennis_winner()
+    raw_tennis = generate_tennis_winner()
+    w1, w2 = calculate_odds_with_margin(raw_tennis, margin) if margin > 0 else raw_tennis
     mk(event, 'TENNIS_WINNER', 'Ganador del Partido', [(p1, w1), (p2, w2)])
 
     h1, h2 = generate_tennis_handicap()
@@ -304,7 +311,10 @@ def create_tennis_markets(event):
 
 
 def create_basketball_markets(event):
-    o1, _, o2 = generate_1X2()
+    from django.conf import settings
+    margin = Decimal(settings.EVENTS_MARGIN_FACTOR)
+    raw_ml = generate_1X2()
+    o1, _, o2 = calculate_odds_with_margin(raw_ml, margin) if margin > 0 else raw_ml
     mk(event, 'BASKET_ML', 'Moneyline', [('Local', o1), ('Visitante', o2)])
 
     s1, s2 = generate_basket_spread()
@@ -337,7 +347,10 @@ def create_basketball_markets(event):
 
 
 def create_simple_markets(event):
-    o1, _, o2 = generate_1X2()
+    from django.conf import settings
+    margin = Decimal(settings.EVENTS_MARGIN_FACTOR)
+    raw_1X2 = generate_1X2()
+    o1, _, o2 = calculate_odds_with_margin(raw_1X2, margin) if margin > 0 else raw_1X2
     mk(event, '1X2', 'Ganador del Partido', [('Local', o1), ('Visitante', o2)])
     to, tu = generate_ou_goals(1.80, 2.00)
     mk(event, 'OU_25', 'Total Sets O/U 2.5', [('Over 2.5', to), ('Under 2.5', tu)])
