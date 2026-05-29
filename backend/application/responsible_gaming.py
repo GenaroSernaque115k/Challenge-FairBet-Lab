@@ -1,4 +1,5 @@
 from decimal import Decimal
+import logging
 from django.utils import timezone
 from rest_framework import serializers
 
@@ -7,6 +8,7 @@ from domain.responsible_gaming import (
     AUTOEXCLUSION_PERIODS, COOLDOWN_HOURS,
     has_cooldown_expired, is_limit_increase, validate_limit_value,
 )
+from domain.users import validate_profile_transition
 
 
 class DepositLimitsSerializer(serializers.ModelSerializer):
@@ -121,6 +123,9 @@ def create_autoexclusion(user, periodo: str, motivo: str = '') -> AutoExclusion:
         auto_exclusion.save()
 
     profile = user.profile
+    error = validate_profile_transition(profile, 'autoexcluido')
+    if error:
+        raise ValueError(error)
     profile.estado_cuenta = 'autoexcluido'
     profile.save()
 
@@ -129,6 +134,7 @@ def create_autoexclusion(user, periodo: str, motivo: str = '') -> AutoExclusion:
 
 def check_and_reactivate_autoexclusion():
     from django.utils import timezone
+    logger = logging.getLogger(__name__)
     now = timezone.now()
     expired = AutoExclusion.objects.filter(activa=True, fecha_fin__isnull=False, fecha_fin__lte=now)
     count = 0
@@ -137,6 +143,10 @@ def check_and_reactivate_autoexclusion():
         ae.save()
         profile = ae.user.profile
         if profile.estado_cuenta == 'autoexcluido':
+            error = validate_profile_transition(profile, 'verificado')
+            if error:
+                logger.error(f'Transicion invalida para {profile.user.username}: {error}')
+                continue
             profile.estado_cuenta = 'verificado'
             profile.save()
         count += 1
