@@ -1,3 +1,3 @@
-from controllers.wallet import RecargarView, RetirarView, SaldoView
+from controllers.wallet import RecargarView, RetirarView, SaldoView, TransferirView
 
-__all__ = ['RecargarView', 'RetirarView', 'SaldoView']
+__all__ = ['RecargarView', 'RetirarView', 'SaldoView', 'TransferirView']
