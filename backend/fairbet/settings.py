@@ -160,6 +160,14 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'audit.tasks.reactivate_autoexcluded_users',
         'schedule': 3600.0,
     },
+    'check-same-ip': {
+        'task': 'audit.tasks.check_same_ip_multiple_accounts',
+        'schedule': 1800.0,
+    },
+    'check-deposit-cashout': {
+        'task': 'audit.tasks.check_deposit_then_cashout',
+        'schedule': 900.0,
+    },
 }
 
 LOGGING = {

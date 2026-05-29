@@ -3,6 +3,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from infrastructure.betting import Bet, BetSelection
 from infrastructure.wallet import LedgerEntry
+from infrastructure.events import Selection
 from domain.audit import append_audit_log
 
 logger = logging.getLogger(__name__)
@@ -34,3 +35,16 @@ def audit_ledger_changes(sender, instance, created, **kwargs):
         'transaction_id': str(instance.transaction_id),
     }
     append_audit_log(None, action, 'LedgerEntry', instance.id, data)
+
+
+@receiver(post_save, sender=Selection)
+def audit_selection_changes(sender, instance, created, **kwargs):
+    action = 'SELECTION_CREATED' if created else 'SELECTION_UPDATED'
+    data = {
+        'id': instance.id,
+        'market_id': instance.market_id,
+        'name': instance.name,
+        'odds': str(instance.odds),
+        'is_winner': instance.is_winner,
+    }
+    append_audit_log(None, action, 'Selection', instance.id, data)

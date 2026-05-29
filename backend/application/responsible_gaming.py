@@ -147,7 +147,7 @@ def validate_user_limits(user, stake: Decimal) -> str | None:
     from decimal import Decimal
     from django.utils import timezone
     from infrastructure.betting import Bet
-    from wallet.application import get_balance as wallet_get_balance
+    from application.wallet import get_balance
 
     try:
         limits = user.deposit_limits

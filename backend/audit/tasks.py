@@ -45,3 +45,85 @@ def reactivate_autoexcluded_users():
     count = check_and_reactivate_autoexclusion()
     logger.info(f'Autoexclusion reactivation check. Reactivated: {count}')
     return count
+
+
+@shared_task
+def check_same_ip_multiple_accounts():
+    now = timezone.now()
+    recent = now - timedelta(hours=24)
+    created = 0
+
+    from infrastructure.audit import AuditLog
+    from infrastructure.users import UserProfile
+
+    for profile in UserProfile.objects.select_related('user').all():
+        user_bets = AuditLog.objects.filter(
+            user=profile.user,
+            timestamp__gte=recent,
+            entity_type='Bet',
+        )
+        if user_bets.count() < 2:
+            continue
+        for log in user_bets:
+            ip = log.data.get('ip')
+            if not ip:
+                continue
+            other_users = AuditLog.objects.filter(
+                timestamp__gte=recent,
+                entity_type='Bet',
+                data__ip=ip,
+            ).exclude(user=profile.user).values_list('user_id', flat=True).distinct()
+            if other_users.count() >= 2:
+                for uid in other_users:
+                    if uid:
+                        _, created_flag = SuspiciousActivity.objects.get_or_create(
+                            user_id=uid,
+                            tipo='misma_ip',
+                            defaults={
+                                'descripcion': f'IP {ip} usada por multiples cuentas',
+                                'severidad': 'high',
+                            },
+                        )
+                        if created_flag:
+                            created += 1
+
+    logger.info(f'Same IP check completed. Alerts: {created}')
+    return created
+
+
+@shared_task
+def check_deposit_then_cashout():
+    from infrastructure.wallet import LedgerEntry
+    now = timezone.now()
+    recent = now - timedelta(hours=1)
+    created = 0
+
+    deposits = LedgerEntry.objects.filter(
+        direction='CREDIT',
+        account__type='main',
+        created_at__gte=recent,
+    ).select_related('account__user')
+
+    for entry in deposits:
+        if entry.account.user is None:
+            continue
+        cashed = Bet.objects.filter(
+            user=entry.account.user,
+            status='cashed_out',
+            settled_at__gte=entry.created_at,
+            settled_at__lte=entry.created_at + timedelta(minutes=30),
+        ).exists()
+        if cashed:
+            _, created_flag = SuspiciousActivity.objects.get_or_create(
+                user=entry.account.user,
+                tipo='deposito_cashout',
+                defaults={
+                    'descripcion': f'Deposito de {entry.amount} BP seguido de cash-out',
+                    'severidad': 'medium',
+                },
+            )
+            if created_flag:
+                created += 1
+
+    logger.info(f'Deposit-cashout check completed. Alerts: {created}')
+    return created
