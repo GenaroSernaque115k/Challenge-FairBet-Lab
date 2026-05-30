@@ -23,7 +23,16 @@ def update_live_odds():
 
     updated = 0
     for event in live_events[:max(1, count // 3)]:
-        selections = Selection.objects.filter(market__event=event).order_by('?')[:3]
+        selections = Selection.objects.filter(
+            market__event=event,
+            market__suspended_until__isnull=True,
+        ).order_by('?')[:3]
+        if not selections.exists():
+            selections = Selection.objects.filter(
+                market__event=event,
+            ).exclude(
+                market__suspended_until__gt=timezone.now(),
+            ).order_by('?')[:3]
         for sel in selections:
             old_odds = sel.odds
             change_pct = Decimal(str(random.uniform(0.02, float(MAX_ODDS_CHANGE_PCT))))

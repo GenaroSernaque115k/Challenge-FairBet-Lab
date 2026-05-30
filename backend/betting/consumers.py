@@ -66,6 +66,11 @@ class EventOddsConsumer(AsyncWebsocketConsumer):
 
 
 def suspender_mercado_por_evento_critico(event_id: int, segundos: int = 30):
+    from django.utils import timezone
+    from infrastructure.events import Market
+    now = timezone.now()
+    until = now + timezone.timedelta(seconds=segundos)
+    Market.objects.filter(event_id=event_id).update(suspended_until=until)
     channel_layer = get_channel_layer()
     group_name = f'event_{event_id}'
     async_to_sync(channel_layer.group_send)(

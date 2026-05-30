@@ -93,6 +93,12 @@ def realizar_apuesta(user, selections_data: list[dict], stake: Decimal,
         event_error = validate_event_not_started(event.status)
         if event_error:
             raise ValueError(f'{event.team_home} vs {event.team_away}: {event_error}')
+        if market.suspended_until and market.suspended_until > timezone_now():
+            remaining = (market.suspended_until - timezone_now()).seconds
+            raise ValueError(
+                f'Mercado "{market.name}" suspendido temporalmente. '
+                f'Disponible en {remaining}s'
+            )
         odds_error = validate_odds(sel.odds)
         if odds_error:
             raise ValueError(f'{sel.name}: {odds_error}')

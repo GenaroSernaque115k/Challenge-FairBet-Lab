@@ -91,6 +91,7 @@ class Market(models.Model):
     type = models.CharField(max_length=30, choices=MarketType.choices)
     name = models.CharField(max_length=200)
     is_live = models.BooleanField(default=False)
+    suspended_until = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         app_label = 'events'
