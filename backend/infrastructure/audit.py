@@ -39,7 +39,7 @@ class AuditLog(models.Model):
 
     @classmethod
     def verify_chain(cls) -> dict:
-        logs = cls.objects.order_by('timestamp')
+        logs = cls.objects.order_by('timestamp', 'id')
         errors = []
         prev_hash = ''
         for log in logs:
