@@ -5,6 +5,7 @@ from infrastructure.betting import Bet, BetSelection
 from infrastructure.wallet import LedgerEntry
 from infrastructure.events import Selection
 from domain.audit import append_audit_log
+from fairbet.middleware import get_current_ip
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,7 @@ def audit_bet_changes(sender, instance, created, **kwargs):
         'stake': str(instance.stake),
         'total_odds': str(instance.total_odds),
         'status': instance.status,
+        'ip': get_current_ip() or '',
     }
     append_audit_log(instance.user, action, 'Bet', instance.id, data)
 

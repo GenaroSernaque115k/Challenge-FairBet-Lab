@@ -127,3 +127,38 @@ def check_deposit_then_cashout():
 
     logger.info(f'Deposit-cashout check completed. Alerts: {created}')
     return created
+
+
+@shared_task
+def check_identical_bet_patterns():
+    now = timezone.now()
+    recent = now - timedelta(minutes=10)
+    created = 0
+
+    recent_bets = Bet.objects.filter(
+        placed_at__gte=recent
+    ).select_related('user').prefetch_related('selections__selection')
+
+    bets_by_pattern: dict = {}
+    for bet in recent_bets:
+        sel_ids = tuple(sorted(bs.selection_id for bs in bet.selections.all()))
+        if not sel_ids:
+            continue
+        key = (bet.user_id, sel_ids, bet.stake)
+        bets_by_pattern.setdefault(key, []).append(bet)
+
+    for (user_id, sel_ids, stake), bets in bets_by_pattern.items():
+        if len(bets) >= 3:
+            _, created_flag = SuspiciousActivity.objects.get_or_create(
+                user_id=user_id,
+                tipo='patron_identico',
+                defaults={
+                    'descripcion': f'{len(bets)} apuestas identicas (stake={stake}) en 10 min',
+                    'severidad': 'medium',
+                },
+            )
+            if created_flag:
+                created += 1
+
+    logger.info(f'Identical patterns check completed. Alerts: {created}')
+    return created
