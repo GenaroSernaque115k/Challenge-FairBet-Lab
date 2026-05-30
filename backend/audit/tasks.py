@@ -162,3 +162,57 @@ def check_identical_bet_patterns():
 
     logger.info(f'Identical patterns check completed. Alerts: {created}')
     return created
+
+
+@shared_task
+def check_bonus_abuse():
+    from infrastructure.bonuses import UserBonus
+    from django.db.models import Count
+    now = timezone.now()
+    recent = now - timedelta(hours=1)
+    created = 0
+
+    active_bonus_users = UserBonus.objects.filter(
+        activo=True,
+        rollover_completado__lt=models.F('bonus__rollover_requerido') * models.F('saldo_bono'),
+    ).values_list('user_id', flat=True)
+
+    if not active_bonus_users:
+        return 0
+
+    for user_id in active_bonus_users:
+        recent_bets = Bet.objects.filter(
+            user_id=user_id,
+            placed_at__gte=recent,
+        ).prefetch_related('selections__selection__market')
+
+        markets_selections: dict = {}
+        for bet in recent_bets:
+            for bs in bet.selections.all():
+                mkt_id = bs.selection.market_id
+                markets_selections.setdefault(mkt_id, set()).add(bs.selection_id)
+
+        for mkt_id, sel_ids in markets_selections.items():
+            market = Bet.objects.filter(
+                user_id=user_id,
+                placed_at__gte=recent,
+                selections__selection__market_id=mkt_id,
+            ).first()
+            if not market:
+                continue
+            mkt = market.selections.first().selection.market
+            total_selections = mkt.selections.count()
+            if len(sel_ids) == total_selections and total_selections >= 2:
+                _, created_flag = SuspiciousActivity.objects.get_or_create(
+                    user_id=user_id,
+                    tipo='multiple_accounts',
+                    defaults={
+                        'descripcion': f'Cubrio todos los resultados del mercado "{mkt.name}" ({total_selections} selecciones). Posible abuso de bono.',
+                        'severidad': 'high',
+                    },
+                )
+                if created_flag:
+                    created += 1
+
+    logger.info(f'Bonus abuse check completed. Alerts: {created}')
+    return created

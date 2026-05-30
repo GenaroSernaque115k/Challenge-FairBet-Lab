@@ -14,13 +14,23 @@ class MetricsView(generics.GenericAPIView):
 
     @extend_schema(
         summary='Metricas del operador',
-        description='GGR, total apostado, total pagado, usuarios activos.',
+        description='GGR, total apostado, total pagado, usuarios activos. '
+                    'Filtros opcionales: ?desde=YYYY-MM-DD&hasta=YYYY-MM-DD.',
+        parameters=[
+            OpenApiParameter(name='desde', type=str, location=OpenApiParameter.QUERY, description='Fecha inicio (YYYY-MM-DD)'),
+            OpenApiParameter(name='hasta', type=str, location=OpenApiParameter.QUERY, description='Fecha fin (YYYY-MM-DD)'),
+        ],
     )
     def get(self, request):
-        metrics = calcular_ggr()
-        from django.db.models import Count
         from django.utils import timezone
-        from datetime import timedelta
+        from datetime import datetime, timedelta
+        desde_str = request.GET.get('desde')
+        hasta_str = request.GET.get('hasta')
+        desde = datetime.strptime(desde_str, '%Y-%m-%d').date() if desde_str else None
+        hasta = datetime.strptime(hasta_str, '%Y-%m-%d').date() if hasta_str else None
+
+        metrics = calcular_ggr(desde, hasta)
+        from django.db.models import Count
 
         semana = timezone.now() - timedelta(days=7)
         active_users = Bet.objects.filter(placed_at__gte=semana).values('user').distinct().count()

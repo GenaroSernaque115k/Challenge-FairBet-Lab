@@ -174,6 +174,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'audit.tasks.check_identical_bet_patterns',
         'schedule': 600.0,
     },
+    'check-bonus-abuse': {
+        'task': 'audit.tasks.check_bonus_abuse',
+        'schedule': 900.0,
+    },
     'update-live-odds': {
         'task': 'betting.tasks.update_live_odds',
         'schedule': 30.0,
