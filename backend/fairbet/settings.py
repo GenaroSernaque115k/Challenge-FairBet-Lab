@@ -170,6 +170,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'audit.tasks.check_deposit_then_cashout',
         'schedule': 900.0,
     },
+    'update-live-odds': {
+        'task': 'betting.tasks.update_live_odds',
+        'schedule': 30.0,
+    },
 }
 
 LOGGING = {

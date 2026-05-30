@@ -76,3 +76,19 @@ def suspender_mercado_por_evento_critico(event_id: int, segundos: int = 30):
             'duration': segundos,
         },
     )
+
+
+def enviar_actualizacion_odds(event_id: int, selection_id: int, old_odds, new_odds):
+    channel_layer = get_channel_layer()
+    group_name = f'event_{event_id}'
+    payload = {
+        'type': 'odds_update',
+        'data': {
+            'type': 'odds_update',
+            'event_id': event_id,
+            'selection_id': selection_id,
+            'old_odds': str(old_odds),
+            'new_odds': str(new_odds),
+        },
+    }
+    async_to_sync(channel_layer.group_send)(group_name, payload)
